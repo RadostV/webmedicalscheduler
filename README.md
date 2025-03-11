@@ -1,132 +1,92 @@
-# Medical Scheduling Appointment Application
+# Medical Appointment System Documentation
 
-A full-stack web application for medical appointment scheduling that provides separate portals for patients and doctors, allowing patients to book appointments and doctors to manage their schedules.
+This repository contains the documentation for the Medical Appointment System, a full-stack application for managing doctor appointments, schedule tracking, and patient bookings.
 
-## Project Overview
+## Documentation Overview
 
-- **Purpose**: A web platform for managing medical appointments.
-- **Users**:
-  - **Patients**: Can log in to view their appointments and schedule new ones by selecting a doctor, date, and available time slot.
-  - **Doctors**: Can log in to view their appointment schedules and set their availability.
-- **Access**: Users must authenticate to access their respective portals (patient or doctor).
+The documentation is built using [MkDocs](https://www.mkdocs.org/) with the [Material theme](https://squidfunk.github.io/mkdocs-material/) and includes:
 
-## Technology Stack
+- User guides for patients and doctors
+- Developer guides for extending and maintaining the system
+- API documentation for both backend and frontend
+- Database schema documentation
+- Deployment guides
+- Testing guides
 
-### Frontend
+## Quick Start
 
-- **React** with TypeScript
-- **Material-UI** for UI components
-- **React Router** for navigation
-- **Formik & Yup** for form handling
-- **@tanstack/react-query** for data fetching
-- **FullCalendar** for calendar views
-- **React DatePicker** for date selection
+### Using Poetry (Recommended)
 
-### Backend
-
-- **Node.js** with **Express.js**
-- **MongoDB** with Mongoose
-- **JWT** for authentication
-- **bcryptjs** for password hashing
-- **cors, helmet** for security
-
-## Repository Structure
-
-```
-doc_project/
-├── frontend/             # React frontend application
-├── backend/              # Node.js/Express backend application
-└── README.md             # Project documentation
-```
-
-## Features
-
-### Patient Portal
-
-- Secure login/authentication
-- View all upcoming and past appointments
-- Schedule new appointments by:
-  - Selecting a doctor
-  - Choosing an available date
-  - Picking an available time slot
-- Cancel or reschedule existing appointments
-
-### Doctor Portal
-
-- Secure login/authentication
-- View daily, weekly, and monthly schedule
-- Set availability for specific days and times
-- View patient appointment details
-- Mark appointments as completed or cancelled
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v14+)
-- npm (v6+)
-- MongoDB (v4+)
-
-### Setting Up the Frontend
-
-1. Navigate to the frontend directory
-2. Install dependencies:
+1. Ensure you have [Poetry](https://python-poetry.org/docs/#installation) installed
+2. Clone this repository
+3. Install dependencies:
 
 ```bash
-npm install
+poetry install
 ```
 
-3. Start the development server:
+4. Serve the documentation locally:
 
 ```bash
-npm start
+./docs.sh serve
 ```
 
-The frontend will be accessible at http://localhost:3000
+5. Open your browser and navigate to http://127.0.0.1:8000/
 
-### Setting Up the Backend
+### Using pip
 
-1. Navigate to the backend directory
-2. Install dependencies:
+1. Ensure you have Python 3.6+ installed
+2. Clone this repository
+3. Install dependencies:
 
 ```bash
-npm install
+pip install -r requirements.txt
 ```
 
-3. Create a `.env` file with the following variables:
-
-```
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/medical-scheduler
-JWT_SECRET=your_jwt_secret
-```
-
-4. Start the server:
+4. Serve the documentation locally:
 
 ```bash
-npm start
+mkdocs serve
 ```
 
-The API will be accessible at http://localhost:5000
+5. Open your browser and navigate to http://127.0.0.1:8000/
 
-## API Endpoints
+## Documentation Commands
 
-### Authentication
+### With Poetry
 
-- `POST /api/auth/login` - User login
+- Serve documentation: `./docs.sh serve`
+- Build documentation: `./docs.sh build`
+- Build with PDF export: `./docs.sh build-pdf`
+- Deploy a new version: `./docs.sh deploy-version 1.0.0 "Release message"`
 
-### Patient Endpoints
+### Without Poetry
 
-- `GET /api/patients/appointments` - Get patient appointments
-- `POST /api/patients/appointments` - Create new appointment
+- Serve documentation: `mkdocs serve`
+- Build documentation: `mkdocs build`
+- Build with PDF export: `ENABLE_PDF_EXPORT=1 mkdocs build`
+- Deploy a new version: `mike deploy --push --update-aliases 1.0.0 latest`
 
-### Doctor Endpoints
+## Contributing to Documentation
 
-- `GET /api/doctors/appointments` - Get doctor appointments
-- `GET /api/doctors/availability` - Get doctor availability
-- `POST /api/doctors/availability` - Set doctor availability
-- `GET /api/doctors/:id/slots` - Get available time slots for a doctor
+Please see [Documentation Guide](docs/guides/documentation-guide.md) for detailed information on how to contribute to the documentation, including:
+
+- Setting up the documentation environment
+- Writing and formatting guidelines
+- Adding new pages
+- Generating PDFs
+- Versioning documentation
+
+## System Requirements
+
+- Python 3.8+ (for Poetry)
+- Python 3.6+ (for direct pip install)
+- Additional system dependencies for WeasyPrint (for PDF generation)
 
 ## License
 
-This project is licensed under the MIT License.
+This documentation is licensed under [MIT License](LICENSE).
+
+## Contact
+
+For questions or issues regarding the documentation, please contact the Medical Appointment Team at team@example.com.
