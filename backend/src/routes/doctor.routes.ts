@@ -13,6 +13,9 @@ interface SetAvailabilityRequest {
 
 interface AppointmentWithDateTime {
   dateTime: Date;
+  patient: {
+    username: string;
+  };
 }
 
 // Set availability validation
@@ -136,7 +139,11 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
         doctorId: req.user!.id,
       },
       include: {
-        patient: true,
+        patient: {
+          select: {
+            username: true,
+          },
+        },
       },
       orderBy: {
         dateTime: 'asc',
@@ -146,6 +153,7 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
     const bookedAppointments = appointments.map((apt: AppointmentWithDateTime) => ({
       ...apt,
       dateTime: apt.dateTime.toISOString(),
+      patientName: apt.patient.username,
     }));
 
     return res.json(bookedAppointments);
@@ -434,7 +442,7 @@ router.get('/slots', async (req: Request, res: Response): Promise<Response> => {
     });
 
     const bookedTimes = new Set(
-      bookedAppointments.map((apt: AppointmentWithDateTime) => apt.dateTime.toTimeString().slice(0, 5))
+      bookedAppointments.map(apt => apt.dateTime.toTimeString().slice(0, 5))
     );
 
     const availableSlots = slots.filter((slot) => !bookedTimes.has(slot));
@@ -524,7 +532,7 @@ router.get('/:id/slots', async (req: Request, res: Response): Promise<Response> 
     });
 
     const bookedTimes = new Set(
-      bookedAppointments.map((apt) => apt.dateTime.toTimeString().slice(0, 5))
+      bookedAppointments.map(apt => apt.dateTime.toTimeString().slice(0, 5))
     );
 
     const availableSlots = slots.filter((slot) => !bookedTimes.has(slot));
@@ -533,6 +541,98 @@ router.get('/:id/slots', async (req: Request, res: Response): Promise<Response> 
   } catch (error) {
     console.error('Error fetching slots:', error);
     return res.status(500).json({ error: 'Failed to fetch available slots' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/doctors/appointments/{id}/status:
+ *   patch:
+ *     summary: Update appointment status
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Appointment ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [completed, cancelled]
+ *     responses:
+ *       200:
+ *         description: Appointment status updated successfully
+ *       400:
+ *         description: Invalid status
+ *       404:
+ *         description: Appointment not found
+ *       500:
+ *         description: Failed to update appointment status
+ */
+router.patch('/appointments/:id/status', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const appointmentId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    if (isNaN(appointmentId)) {
+      return res.status(400).json({ error: 'Invalid appointment ID' });
+    }
+
+    if (!['completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    // Check if appointment exists and belongs to the doctor
+    const appointment = await prisma.appointment.findFirst({
+      where: {
+        id: appointmentId,
+        doctorId: req.user!.id,
+      },
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    // Update appointment status
+    const updatedAppointment = await prisma.appointment.update({
+      where: {
+        id: appointmentId,
+      },
+      data: {
+        status,
+      },
+      include: {
+        patient: {
+          select: {
+            username: true,
+          },
+        },
+      },
+    });
+
+    // Format the response
+    const formattedAppointment = {
+      ...updatedAppointment,
+      patientName: updatedAppointment.patient.username,
+    };
+
+    return res.status(200).json(formattedAppointment);
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
+    return res.status(500).json({ error: 'Failed to update appointment status' });
   }
 });
 

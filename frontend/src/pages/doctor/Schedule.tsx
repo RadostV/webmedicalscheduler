@@ -29,9 +29,11 @@ import {
   AppointmentStatus,
   CalendarEvent,
 } from "../../types/shared/appointment.types";
+import { useNavigate } from "react-router-dom";
 
 const Schedule: React.FC = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,22 +52,22 @@ const Schedule: React.FC = () => {
     useState<Appointment | null>(null);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      setLoading(true);
-      try {
-        const fetchedAppointments = await doctorService.getAppointments();
-        setAppointments(fetchedAppointments);
-        setError(null);
-      } catch (err) {
-        setError("Failed to fetch appointments. Please try again later.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAppointments();
   }, []);
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const fetchedAppointments = await doctorService.getAppointments();
+      setAppointments(fetchedAppointments);
+      setError(null);
+    } catch (err) {
+      setError("Failed to fetch appointments. Please try again later.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -75,8 +77,6 @@ const Schedule: React.FC = () => {
     appointment: Appointment,
     status: AppointmentStatus
   ) => {
-    setSelectedAppointment(appointment);
-
     let title = "";
     let message = "";
 
@@ -91,34 +91,38 @@ const Schedule: React.FC = () => {
     setModalData({
       title,
       message,
-      action: () => confirmStatusChange(status),
+      action: async () => {
+        try {
+          setLoading(true);
+          console.log("Updating appointment:", {
+            appointmentId: appointment.id,
+            status,
+          });
+
+          const updatedAppointment =
+            await doctorService.updateAppointmentStatus(appointment.id, status);
+          console.log("Updated appointment:", updatedAppointment);
+
+          setAppointments((prevAppointments) =>
+            prevAppointments.map((app) =>
+              app.id === appointment.id ? { ...updatedAppointment } : app
+            )
+          );
+
+          setModalOpen(false);
+          setError(null);
+        } catch (err) {
+          console.error("Error updating appointment status:", err);
+          setError(
+            `Failed to update appointment status. Please try again later.`
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
     });
 
     setModalOpen(true);
-  };
-
-  const confirmStatusChange = async (status: AppointmentStatus) => {
-    if (!selectedAppointment) return;
-
-    try {
-      await doctorService.updateAppointmentStatus(
-        selectedAppointment.id,
-        status
-      );
-
-      // Update the local state
-      setAppointments((prevAppointments) =>
-        prevAppointments.map((app) =>
-          app.id === selectedAppointment.id ? { ...app, status } : app
-        )
-      );
-
-      setModalOpen(false);
-      setSelectedAppointment(null);
-    } catch (err) {
-      setError(`Failed to update appointment status. Please try again later.`);
-      console.error(err);
-    }
   };
 
   const getStatusChipColor = (status: AppointmentStatus) => {

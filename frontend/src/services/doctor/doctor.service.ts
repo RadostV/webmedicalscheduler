@@ -22,7 +22,15 @@ export const doctorService = {
     await api.delete(`/doctors/availability/${availabilityId}`);
   },
 
-  async updateAppointmentStatus(appointmentId: string, status: AppointmentStatus): Promise<void> {
-    await api.patch(`/doctors/appointments/${appointmentId}/status`, { status });
+  async updateAppointmentStatus(appointmentId: string, status: AppointmentStatus): Promise<Appointment> {
+    console.log('Updating appointment status:', { appointmentId, status });
+    try {
+      const response = await api.patch<Appointment>(`/doctors/appointments/${appointmentId}/status`, { status });
+      console.log('Update appointment response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error in updateAppointmentStatus:', error);
+      throw error;
+    }
   }
 }; 
