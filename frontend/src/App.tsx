@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Pages
 import Login from "./pages/shared/Login";
+import Register from "./pages/shared/Register";
 import Home from "./pages/shared/Home";
 import PatientPortal from "./pages/patient/PatientPortal";
 import DoctorPortal from "./pages/doctor/DoctorPortal";
@@ -52,6 +53,7 @@ const App: React.FC = () => {
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
             <Route
               path="/patient/*"

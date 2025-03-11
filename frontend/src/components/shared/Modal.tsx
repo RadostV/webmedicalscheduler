@@ -12,10 +12,11 @@ interface ModalProps {
   open: boolean;
   title: string;
   message: string;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
+  customActions?: React.ReactNode;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -26,6 +27,7 @@ const Modal: React.FC<ModalProps> = ({
   onCancel,
   confirmText = "Confirm",
   cancelText = "Cancel",
+  customActions,
 }) => {
   return (
     <Dialog open={open} onClose={onCancel}>
@@ -34,12 +36,18 @@ const Modal: React.FC<ModalProps> = ({
         <DialogContentText>{message}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel} color="inherit">
-          {cancelText}
-        </Button>
-        <Button onClick={onConfirm} color="primary" autoFocus>
-          {confirmText}
-        </Button>
+        {customActions || (
+          <>
+            <Button onClick={onCancel} color="inherit">
+              {cancelText}
+            </Button>
+            {onConfirm && (
+              <Button onClick={onConfirm} color="primary" autoFocus>
+                {confirmText}
+              </Button>
+            )}
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );
