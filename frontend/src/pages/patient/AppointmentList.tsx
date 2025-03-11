@@ -1,72 +1,37 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Chip,
   Button,
+  Chip,
 } from "@mui/material";
 import { format } from "date-fns";
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
-import Modal from "../../components/shared/Modal";
-import {
-  Appointment,
-  AppointmentStatus,
-} from "../../types/shared/appointment.types";
+import { Appointment } from "../../types/appointment";
+import { patientService } from "../../services/patient/patient.service";
 
 const AppointmentList: React.FC = () => {
-  const { token } = useAuth();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<Appointment | null>(null);
 
   useEffect(() => {
     const fetchAppointments = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // Mock data for now
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const mockAppointments: Appointment[] = [
-          {
-            id: "1",
-            patientId: "1",
-            doctorId: "2",
-            doctorName: "Dr. Jane Smith",
-            dateTime: new Date(2023, 5, 15, 10, 30).toISOString(),
-            status: "scheduled",
-          },
-          {
-            id: "2",
-            patientId: "1",
-            doctorId: "3",
-            doctorName: "Dr. John Doe",
-            dateTime: new Date(2023, 5, 20, 14, 0).toISOString(),
-            status: "scheduled",
-          },
-          {
-            id: "3",
-            patientId: "1",
-            doctorId: "2",
-            doctorName: "Dr. Jane Smith",
-            dateTime: new Date(2023, 4, 5, 9, 0).toISOString(),
-            status: "completed",
-          },
-        ];
-
-        setAppointments(mockAppointments);
+        const appointmentsList = await patientService.getAppointments();
+        setAppointments(appointmentsList);
         setError(null);
       } catch (err) {
         setError("Failed to fetch appointments. Please try again later.");
@@ -77,38 +42,17 @@ const AppointmentList: React.FC = () => {
     };
 
     fetchAppointments();
-  }, [token]);
+  }, []);
 
-  const handleCancelAppointment = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setModalOpen(true);
-  };
+  if (loading) {
+    return <LoadingSpinner message="Loading appointments..." />;
+  }
 
-  const confirmCancelAppointment = async () => {
-    if (!selectedAppointment) return;
+  if (error) {
+    return <ErrorMessage message={error} />;
+  }
 
-    try {
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Update the local state
-      setAppointments((prevAppointments) =>
-        prevAppointments.map((app) =>
-          app.id === selectedAppointment.id
-            ? { ...app, status: "cancelled" as AppointmentStatus }
-            : app
-        )
-      );
-
-      setModalOpen(false);
-      setSelectedAppointment(null);
-    } catch (err) {
-      setError("Failed to cancel appointment. Please try again later.");
-      console.error(err);
-    }
-  };
-
-  const getStatusChipColor = (status: AppointmentStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "scheduled":
         return "primary";
@@ -121,102 +65,70 @@ const AppointmentList: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner message="Loading appointments..." />;
-  }
-
-  if (error) {
-    return <ErrorMessage message={error} />;
-  }
-
-  if (appointments.length === 0) {
-    return (
-      <Box sx={{ mt: 4, textAlign: "center" }}>
-        <Typography variant="h5" gutterBottom>
-          No Appointments
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          You don't have any appointments scheduled.
-        </Typography>
+  return (
+    <Box sx={{ mt: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+        <Typography variant="h4">My Appointments</Typography>
         <Button
           variant="contained"
           color="primary"
-          sx={{ mt: 2 }}
-          href="/patient/schedule"
+          onClick={() => navigate("/patient/schedule")}
         >
-          Schedule an Appointment
+          Schedule New Appointment
         </Button>
       </Box>
-    );
-  }
 
-  return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        My Appointments
-      </Typography>
-
-      <TableContainer component={Paper} sx={{ mt: 3 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Doctor</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Time</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {appointments.map((appointment) => {
-              const appointmentDate = new Date(appointment.dateTime);
-              return (
-                <TableRow key={appointment.id}>
-                  <TableCell>{appointment.doctorName}</TableCell>
-                  <TableCell>
-                    {format(appointmentDate, "MMM dd, yyyy")}
-                  </TableCell>
-                  <TableCell>{format(appointmentDate, "h:mm a")}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={
-                        appointment.status.charAt(0).toUpperCase() +
-                        appointment.status.slice(1)
-                      }
-                      color={getStatusChipColor(appointment.status)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {appointment.status === "scheduled" && (
-                      <Button
+      {appointments.length === 0 ? (
+        <Paper sx={{ p: 3, textAlign: "center" }}>
+          <Typography>No appointments scheduled.</Typography>
+          <Button
+            variant="outlined"
+            sx={{ mt: 2 }}
+            onClick={() => navigate("/patient/schedule")}
+          >
+            Schedule Your First Appointment
+          </Button>
+        </Paper>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Doctor</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Time</TableCell>
+                <TableCell>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {appointments
+                .sort(
+                  (a, b) =>
+                    new Date(b.dateTime).getTime() -
+                    new Date(a.dateTime).getTime()
+                )
+                .map((appointment) => (
+                  <TableRow key={appointment.id}>
+                    <TableCell>{appointment.doctor?.name}</TableCell>
+                    <TableCell>
+                      {format(new Date(appointment.dateTime), "MMMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(appointment.dateTime), "h:mm a")}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={appointment.status}
+                        color={getStatusColor(appointment.status) as any}
                         size="small"
-                        color="error"
-                        onClick={() => handleCancelAppointment(appointment)}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Modal
-        open={modalOpen}
-        title="Cancel Appointment"
-        message="Are you sure you want to cancel this appointment? This action cannot be undone."
-        onConfirm={confirmCancelAppointment}
-        onCancel={() => {
-          setModalOpen(false);
-          setSelectedAppointment(null);
-        }}
-        confirmText="Yes, Cancel Appointment"
-        cancelText="No, Keep Appointment"
-      />
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
     </Box>
   );
 };

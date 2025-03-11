@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  type      String   // "patient" or "doctor"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  doctorProfile     Doctor?
+  patientAppointments Appointment[] @relation("PatientAppointments")
+  doctorAppointments  Appointment[] @relation("DoctorAppointments")
+}
+
+model Doctor {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  specialty  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  user         User          @relation(fields: [userId], references: [id])
+  availability Availability[]
+}
+
+model Appointment {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  dateTime  DateTime
+  status    String   @default("scheduled") // "scheduled", "completed", "cancelled"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  patient   User     @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor    User     @relation("DoctorAppointments", fields: [doctorId], references: [id])
+}
+
+model Availability {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime String   // Format: "HH:mm"
+  endTime   String   // Format: "HH:mm"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+} 

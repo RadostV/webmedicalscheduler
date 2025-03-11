@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -12,20 +12,29 @@ import {
   SelectChangeEvent,
   Grid,
   FormHelperText,
-  Alert,
 } from "@mui/material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format, addDays, isBefore } from "date-fns";
+import {
+  format,
+  addDays,
+  isBefore,
+  getDay,
+  startOfMonth,
+  endOfMonth,
+} from "date-fns";
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
+import SuccessMessage from "../../components/shared/SuccessMessage";
 import Modal from "../../components/shared/Modal";
-import { Doctor } from "../../types/doctor/doctor.types";
-import { TimeSlot } from "../../types/shared/appointment.types";
+import { Doctor } from "../../types/doctor";
+import { TimeSlot } from "../../types/appointment";
+import { patientService } from "../../services/patient/patient.service";
+import { doctorService } from "../../services/doctor/doctor.service";
+import { Availability } from "../../types/doctor";
 
 const AppointmentScheduler: React.FC = () => {
-  const { token } = useAuth();
   const navigate = useNavigate();
 
   // State
@@ -37,43 +46,87 @@ const AppointmentScheduler: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [formErrors, setFormErrors] = useState({
     doctor: false,
     date: false,
     time: false,
   });
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Function to check available slots for a date range
+  const checkAvailableDates = useCallback(
+    async (startDate: Date, endDate: Date) => {
+      if (!selectedDoctor) return;
+
+      const dates = new Set<string>();
+      const currentDate = new Date(startDate);
+
+      while (currentDate <= endDate) {
+        try {
+          const formattedDate = format(currentDate, "yyyy-MM-dd");
+          const slots = await patientService.getDoctorSlots(
+            selectedDoctor,
+            formattedDate
+          );
+          if (slots.length > 0) {
+            dates.add(formattedDate);
+          }
+        } catch (err) {
+          // If no slots are available, just continue to the next date
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      setAvailableDates(dates);
+    },
+    [selectedDoctor]
+  );
+
+  // Check available dates when month changes or doctor changes
+  const handleMonthChange = useCallback(
+    (date: Date) => {
+      const start = startOfMonth(date);
+      const end = endOfMonth(date);
+      checkAvailableDates(start, end);
+    },
+    [checkAvailableDates]
+  );
+
+  useEffect(() => {
+    if (selectedDoctor) {
+      const today = new Date();
+      handleMonthChange(today);
+    } else {
+      setAvailableDates(new Set());
+    }
+  }, [selectedDoctor, handleMonthChange]);
+
+  // Filter dates based on availability
+  const filterDate = (date: Date) => {
+    // Don't allow past dates
+    if (isBefore(date, new Date())) {
+      return false;
+    }
+
+    // If no doctor is selected, don't allow any dates
+    if (!selectedDoctor) {
+      return false;
+    }
+
+    // Check if the date has available slots
+    const formattedDate = format(date, "yyyy-MM-dd");
+    return availableDates.has(formattedDate);
+  };
 
   // Fetch doctors on mount
   useEffect(() => {
     const fetchDoctors = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // Mock data for now
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const mockDoctors: Doctor[] = [
-          {
-            id: "2",
-            userId: "2",
-            specialty: "Cardiology",
-            name: "Dr. Jane Smith",
-          },
-          {
-            id: "3",
-            userId: "3",
-            specialty: "Dermatology",
-            name: "Dr. John Doe",
-          },
-          {
-            id: "4",
-            userId: "4",
-            specialty: "Pediatrics",
-            name: "Dr. Sarah Johnson",
-          },
-        ];
-
-        setDoctors(mockDoctors);
+        const doctorsList = await patientService.getDoctors();
+        setDoctors(doctorsList);
+        setError(null);
       } catch (err) {
         setError("Failed to fetch doctors. Please try again later.");
         console.error(err);
@@ -83,7 +136,71 @@ const AppointmentScheduler: React.FC = () => {
     };
 
     fetchDoctors();
-  }, [token]);
+  }, []);
+
+  // Fetch doctor's availability when selected
+  useEffect(() => {
+    const fetchDoctorAvailability = async () => {
+      if (!selectedDoctor) {
+        setTimeSlots([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        // We don't need to fetch availability here anymore since we're using the slots endpoint
+        setTimeSlots([]);
+        setError(null);
+      } catch (err) {
+        setError(
+          "Failed to fetch doctor's availability. Please try again later."
+        );
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctorAvailability();
+  }, [selectedDoctor]);
+
+  const fetchTimeSlots = useCallback(async () => {
+    if (!selectedDoctor || !selectedDate) return;
+
+    setLoading(true);
+    try {
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const slots = await patientService.getDoctorSlots(
+        selectedDoctor,
+        formattedDate
+      );
+
+      // Convert slots to TimeSlot format with proper typing
+      const timeSlots: TimeSlot[] = slots.map((time: string) => ({
+        time,
+        available: true,
+      }));
+
+      setTimeSlots(timeSlots);
+      setError(null);
+    } catch (err: any) {
+      // Don't show error message for no availability, just clear the slots
+      if (
+        err.response?.status === 404 &&
+        err.response?.data?.error === "No availability found for this day"
+      ) {
+        setTimeSlots([]);
+        setError(null);
+      } else {
+        setError(
+          "Failed to fetch available time slots. Please try again later."
+        );
+        console.error(err);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDoctor, selectedDate]);
 
   // Fetch time slots when doctor and date are selected
   useEffect(() => {
@@ -93,48 +210,18 @@ const AppointmentScheduler: React.FC = () => {
       setTimeSlots([]);
       setSelectedTime("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDoctor, selectedDate]);
-
-  const fetchTimeSlots = async () => {
-    if (!selectedDoctor || !selectedDate) return;
-
-    setLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      // Mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const mockTimeSlots: TimeSlot[] = [
-        { time: "09:00", available: true },
-        { time: "09:30", available: true },
-        { time: "10:00", available: false },
-        { time: "10:30", available: true },
-        { time: "11:00", available: true },
-        { time: "11:30", available: false },
-        { time: "13:00", available: true },
-        { time: "13:30", available: true },
-        { time: "14:00", available: true },
-        { time: "14:30", available: false },
-        { time: "15:00", available: true },
-      ];
-
-      setTimeSlots(mockTimeSlots);
-    } catch (err) {
-      setError("Failed to fetch available time slots. Please try again later.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [selectedDoctor, selectedDate, fetchTimeSlots]);
 
   const handleDoctorChange = (event: SelectChangeEvent) => {
     setSelectedDoctor(event.target.value);
+    setSelectedDate(null);
+    setSelectedTime("");
     setFormErrors({ ...formErrors, doctor: false });
   };
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
+    setSelectedTime("");
     setFormErrors({ ...formErrors, date: false });
   };
 
@@ -165,13 +252,23 @@ const AppointmentScheduler: React.FC = () => {
 
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // Mock appointment creation for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const dateTime = new Date(selectedDate);
+      const [hours, minutes] = selectedTime.split(":");
+      dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-      // Close modal and redirect to appointments page
+      await patientService.scheduleAppointment({
+        doctorId: selectedDoctor,
+        dateTime: dateTime.toISOString(),
+      });
+
+      // Show success message
+      setSuccessMessage("Appointment scheduled successfully");
       setModalOpen(false);
-      navigate("/patient/appointments");
+
+      // Redirect after a short delay to show the success message
+      setTimeout(() => {
+        navigate("/patient/appointments");
+      }, 2000);
     } catch (err) {
       setError("Failed to schedule appointment. Please try again later.");
       console.error(err);
@@ -189,15 +286,9 @@ const AppointmentScheduler: React.FC = () => {
     return <ErrorMessage message={error} />;
   }
 
-  // Filter out past dates
-  const today = new Date();
-  const filterDate = (date: Date) => {
-    return !isBefore(date, today);
-  };
-
   // Get doctor name for confirmation message
   const selectedDoctorName =
-    doctors.find((doctor) => doctor.id === selectedDoctor)?.name || "";
+    doctors.find((doctor) => doctor.userId === selectedDoctor)?.name || "";
 
   // Format date and time for confirmation message
   const formattedDate = selectedDate
@@ -213,6 +304,9 @@ const AppointmentScheduler: React.FC = () => {
         Schedule an Appointment
       </Typography>
 
+      {error && <ErrorMessage message={error} />}
+      {successMessage && <SuccessMessage message={successMessage} />}
+
       <Paper sx={{ p: 3, mt: 3 }}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
@@ -226,7 +320,7 @@ const AppointmentScheduler: React.FC = () => {
                 onChange={handleDoctorChange}
               >
                 {doctors.map((doctor) => (
-                  <MenuItem key={doctor.id} value={doctor.id}>
+                  <MenuItem key={doctor.id} value={doctor.userId}>
                     {doctor.name} - {doctor.specialty}
                   </MenuItem>
                 ))}
@@ -261,11 +355,12 @@ const AppointmentScheduler: React.FC = () => {
                 <DatePicker
                   selected={selectedDate}
                   onChange={handleDateChange}
-                  minDate={today}
-                  maxDate={addDays(today, 30)}
+                  minDate={new Date()}
+                  maxDate={addDays(new Date(), 30)}
                   placeholderText="Select a date"
                   filterDate={filterDate}
                   dateFormat="MMMM d, yyyy"
+                  onMonthChange={handleMonthChange}
                 />
               </Box>
               {formErrors.date && (

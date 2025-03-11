@@ -95,9 +95,19 @@ const Navbar: React.FC = () => {
             </Box>
           </>
         ) : (
-          <Button color="inherit" component={Link} to="/login">
-            Login
-          </Button>
+          <Box>
+            <Button color="inherit" component={Link} to="/login" sx={{ mr: 1 }}>
+              Login
+            </Button>
+            <Button
+              color="inherit"
+              component={Link}
+              to="/register"
+              variant="outlined"
+            >
+              Register
+            </Button>
+          </Box>
         )}
       </Toolbar>
     </AppBar>

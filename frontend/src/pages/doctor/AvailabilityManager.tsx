@@ -17,16 +17,21 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Divider,
   SelectChangeEvent,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
+import SuccessMessage from "../../components/shared/SuccessMessage";
 import Modal from "../../components/shared/Modal";
 import { format } from "date-fns";
-import { Availability, DayAvailability } from "../../types/doctor/doctor.types";
+import { doctorService } from "../../services/doctor/doctor.service";
+import { Availability } from "../../types/doctor";
+
+interface DayAvailability extends Availability {
+  day: string;
+}
 
 const AvailabilityManager: React.FC = () => {
   const { token } = useAuth();
@@ -66,42 +71,19 @@ const AvailabilityManager: React.FC = () => {
     const fetchAvailability = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // Mock data for now
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const availabilityList = await doctorService.getAvailability();
 
-        const mockAvailabilities: DayAvailability[] = [
-          {
-            id: "1",
-            day: "Monday",
-            dayOfWeek: 1,
-            startTime: "09:00",
-            endTime: "17:00",
-          },
-          {
-            id: "2",
-            day: "Tuesday",
-            dayOfWeek: 2,
-            startTime: "09:00",
-            endTime: "17:00",
-          },
-          {
-            id: "3",
-            day: "Wednesday",
-            dayOfWeek: 3,
-            startTime: "09:00",
-            endTime: "17:00",
-          },
-          {
-            id: "4",
-            day: "Thursday",
-            dayOfWeek: 4,
-            startTime: "09:00",
-            endTime: "12:00",
-          },
-        ];
+        // Convert to DayAvailability format with proper type conversion
+        const dayAvailabilities: DayAvailability[] = availabilityList.map(
+          (avail) => ({
+            ...avail,
+            id: avail.id.toString(),
+            doctorId: avail.doctorId.toString(),
+            day: daysOfWeek[avail.dayOfWeek].label,
+          })
+        );
 
-        setAvailabilities(mockAvailabilities);
+        setAvailabilities(dayAvailabilities);
         setError(null);
       } catch (err) {
         setError("Failed to fetch availability. Please try again later.");
@@ -112,7 +94,7 @@ const AvailabilityManager: React.FC = () => {
     };
 
     fetchAvailability();
-  }, [token]);
+  }, []);
 
   const handleDayChange = (event: SelectChangeEvent<number | "">) => {
     setDayOfWeek(event.target.value as number);
@@ -152,10 +134,21 @@ const AvailabilityManager: React.FC = () => {
 
     setSaving(true);
     try {
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const newAvailability = await doctorService.setAvailability({
+        dayOfWeek: dayOfWeek as number,
+        startTime,
+        endTime,
+      });
 
-      // Check if this day already exists
+      // Convert to DayAvailability format with proper type conversion
+      const dayAvailability: DayAvailability = {
+        ...newAvailability,
+        id: newAvailability.id.toString(),
+        doctorId: newAvailability.doctorId.toString(),
+        day: daysOfWeek[newAvailability.dayOfWeek].label,
+      };
+
+      // Update local state
       const existingIndex = availabilities.findIndex(
         (avail) => avail.dayOfWeek === dayOfWeek
       );
@@ -163,22 +156,11 @@ const AvailabilityManager: React.FC = () => {
       if (existingIndex >= 0) {
         // Update existing availability
         const updatedAvailabilities = [...availabilities];
-        updatedAvailabilities[existingIndex] = {
-          ...updatedAvailabilities[existingIndex],
-          startTime,
-          endTime,
-        };
+        updatedAvailabilities[existingIndex] = dayAvailability;
         setAvailabilities(updatedAvailabilities);
       } else {
         // Add new availability
-        const newAvailability: DayAvailability = {
-          id: `new-${Date.now()}`, // Temporary ID
-          day: daysOfWeek.find((day) => day.value === dayOfWeek)?.label || "",
-          dayOfWeek: dayOfWeek as number,
-          startTime,
-          endTime,
-        };
-        setAvailabilities([...availabilities, newAvailability]);
+        setAvailabilities([...availabilities, dayAvailability]);
       }
 
       // Clear the form
@@ -206,8 +188,7 @@ const AvailabilityManager: React.FC = () => {
     if (!selectedAvailability) return;
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await doctorService.deleteAvailability(selectedAvailability);
 
       // Remove from local state
       setAvailabilities(
@@ -249,7 +230,7 @@ const AvailabilityManager: React.FC = () => {
 
       {successMessage && (
         <Box sx={{ mb: 2 }}>
-          <ErrorMessage message={successMessage} title="Success" />
+          <SuccessMessage message={successMessage} />
         </Box>
       )}
 
