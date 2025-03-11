@@ -15,7 +15,14 @@ import {
 } from "@mui/material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format, addDays, isBefore, getDay } from "date-fns";
+import {
+  format,
+  addDays,
+  isBefore,
+  getDay,
+  startOfMonth,
+  endOfMonth,
+} from "date-fns";
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
@@ -38,14 +45,77 @@ const AppointmentScheduler: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [doctorAvailability, setDoctorAvailability] = useState<Availability[]>(
-    []
-  );
+  const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [formErrors, setFormErrors] = useState({
     doctor: false,
     date: false,
     time: false,
   });
+
+  // Function to check available slots for a date range
+  const checkAvailableDates = useCallback(
+    async (startDate: Date, endDate: Date) => {
+      if (!selectedDoctor) return;
+
+      const dates = new Set<string>();
+      const currentDate = new Date(startDate);
+
+      while (currentDate <= endDate) {
+        try {
+          const formattedDate = format(currentDate, "yyyy-MM-dd");
+          const slots = await patientService.getDoctorSlots(
+            selectedDoctor,
+            formattedDate
+          );
+          if (slots.length > 0) {
+            dates.add(formattedDate);
+          }
+        } catch (err) {
+          // If no slots are available, just continue to the next date
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      setAvailableDates(dates);
+    },
+    [selectedDoctor]
+  );
+
+  // Check available dates when month changes or doctor changes
+  const handleMonthChange = useCallback(
+    (date: Date) => {
+      const start = startOfMonth(date);
+      const end = endOfMonth(date);
+      checkAvailableDates(start, end);
+    },
+    [checkAvailableDates]
+  );
+
+  useEffect(() => {
+    if (selectedDoctor) {
+      const today = new Date();
+      handleMonthChange(today);
+    } else {
+      setAvailableDates(new Set());
+    }
+  }, [selectedDoctor, handleMonthChange]);
+
+  // Filter dates based on availability
+  const filterDate = (date: Date) => {
+    // Don't allow past dates
+    if (isBefore(date, new Date())) {
+      return false;
+    }
+
+    // If no doctor is selected, don't allow any dates
+    if (!selectedDoctor) {
+      return false;
+    }
+
+    // Check if the date has available slots
+    const formattedDate = format(date, "yyyy-MM-dd");
+    return availableDates.has(formattedDate);
+  };
 
   // Fetch doctors on mount
   useEffect(() => {
@@ -70,17 +140,14 @@ const AppointmentScheduler: React.FC = () => {
   useEffect(() => {
     const fetchDoctorAvailability = async () => {
       if (!selectedDoctor) {
-        setDoctorAvailability([]);
+        setTimeSlots([]);
         return;
       }
 
       setLoading(true);
       try {
-        const availability = await doctorService.getDoctorAvailability(
-          selectedDoctor
-        );
-        console.log("Doctor availability:", availability);
-        setDoctorAvailability(availability);
+        // We don't need to fetch availability here anymore since we're using the slots endpoint
+        setTimeSlots([]);
         setError(null);
       } catch (err) {
         setError(
@@ -132,22 +199,6 @@ const AppointmentScheduler: React.FC = () => {
       setLoading(false);
     }
   }, [selectedDoctor, selectedDate]);
-
-  // Filter dates based on doctor's availability
-  const filterDate = (date: Date) => {
-    // Don't allow past dates
-    if (isBefore(date, new Date())) {
-      return false;
-    }
-
-    // If no doctor is selected, don't allow any dates
-    if (!selectedDoctor) {
-      return false;
-    }
-
-    // For now, allow all future dates since we'll check availability when fetching time slots
-    return true;
-  };
 
   // Fetch time slots when doctor and date are selected
   useEffect(() => {
@@ -299,6 +350,7 @@ const AppointmentScheduler: React.FC = () => {
                   placeholderText="Select a date"
                   filterDate={filterDate}
                   dateFormat="MMMM d, yyyy"
+                  onMonthChange={handleMonthChange}
                 />
               </Box>
               {formErrors.date && (
