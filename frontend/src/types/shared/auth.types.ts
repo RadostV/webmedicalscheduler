@@ -1,5 +1,10 @@
 export type UserType = 'patient' | 'doctor';
 
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -14,12 +19,7 @@ export interface AuthState {
   error: string | null;
 }
 
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface LoginResponse {
+export interface AuthResponse {
   token: string;
   user: User;
 } 

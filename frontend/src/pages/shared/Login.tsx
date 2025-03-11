@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation, Navigate } from "react-router-dom";
+import { useLocation, Navigate } from "react-router-dom";
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import {
@@ -29,7 +29,6 @@ interface LocationState {
 
 const Login: React.FC = () => {
   const { isAuthenticated, login, loading, error, user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [loginError, setLoginError] = useState<string | null>(null);
 

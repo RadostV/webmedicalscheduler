@@ -17,7 +17,6 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Divider,
   SelectChangeEvent,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -26,7 +25,7 @@ import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
 import Modal from "../../components/shared/Modal";
 import { format } from "date-fns";
-import { Availability, DayAvailability } from "../../types/doctor/doctor.types";
+import { DayAvailability } from "../../types/doctor/doctor.types";
 
 const AvailabilityManager: React.FC = () => {
   const { token } = useAuth();
