@@ -1,6 +1,7 @@
 import api from '../../config/api.config';
 import { Appointment, AppointmentStatus } from '../../types/shared/appointment.types';
 import { Availability, AvailabilityRequest } from '../../types/doctor';
+import axios from 'axios';
 
 export const doctorService = {
   async getAppointments(): Promise<Appointment[]> {
@@ -11,6 +12,19 @@ export const doctorService = {
   async getAvailability(): Promise<Availability[]> {
     const response = await api.get<Availability[]>('/doctors/availability');
     return response.data;
+  },
+
+  async getDoctorAvailability(doctorId: string): Promise<Availability[]> {
+    try {
+      const response = await api.get<Availability[]>(`/doctors/${doctorId}/availability`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        // If no availability is found, return an empty array instead of throwing an error
+        return [];
+      }
+      throw error;
+    }
   },
 
   async setAvailability(availabilityData: AvailabilityRequest): Promise<Availability> {

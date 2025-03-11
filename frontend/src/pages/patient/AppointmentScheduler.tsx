@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { format, addDays, isBefore } from "date-fns";
+import { format, addDays, isBefore, getDay } from "date-fns";
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
@@ -23,6 +23,8 @@ import Modal from "../../components/shared/Modal";
 import { Doctor } from "../../types/doctor";
 import { TimeSlot } from "../../types/appointment";
 import { patientService } from "../../services/patient/patient.service";
+import { doctorService } from "../../services/doctor/doctor.service";
+import { Availability } from "../../types/doctor";
 
 const AppointmentScheduler: React.FC = () => {
   const navigate = useNavigate();
@@ -36,6 +38,9 @@ const AppointmentScheduler: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [doctorAvailability, setDoctorAvailability] = useState<Availability[]>(
+    []
+  );
   const [formErrors, setFormErrors] = useState({
     doctor: false,
     date: false,
@@ -61,6 +66,35 @@ const AppointmentScheduler: React.FC = () => {
     fetchDoctors();
   }, []);
 
+  // Fetch doctor's availability when selected
+  useEffect(() => {
+    const fetchDoctorAvailability = async () => {
+      if (!selectedDoctor) {
+        setDoctorAvailability([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const availability = await doctorService.getDoctorAvailability(
+          selectedDoctor
+        );
+        console.log("Doctor availability:", availability);
+        setDoctorAvailability(availability);
+        setError(null);
+      } catch (err) {
+        setError(
+          "Failed to fetch doctor's availability. Please try again later."
+        );
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctorAvailability();
+  }, [selectedDoctor]);
+
   const fetchTimeSlots = useCallback(async () => {
     if (!selectedDoctor || !selectedDate) return;
 
@@ -80,13 +114,40 @@ const AppointmentScheduler: React.FC = () => {
 
       setTimeSlots(timeSlots);
       setError(null);
-    } catch (err) {
-      setError("Failed to fetch available time slots. Please try again later.");
-      console.error(err);
+    } catch (err: any) {
+      // Don't show error message for no availability, just clear the slots
+      if (
+        err.response?.status === 404 &&
+        err.response?.data?.error === "No availability found for this day"
+      ) {
+        setTimeSlots([]);
+        setError(null);
+      } else {
+        setError(
+          "Failed to fetch available time slots. Please try again later."
+        );
+        console.error(err);
+      }
     } finally {
       setLoading(false);
     }
   }, [selectedDoctor, selectedDate]);
+
+  // Filter dates based on doctor's availability
+  const filterDate = (date: Date) => {
+    // Don't allow past dates
+    if (isBefore(date, new Date())) {
+      return false;
+    }
+
+    // If no doctor is selected, don't allow any dates
+    if (!selectedDoctor) {
+      return false;
+    }
+
+    // For now, allow all future dates since we'll check availability when fetching time slots
+    return true;
+  };
 
   // Fetch time slots when doctor and date are selected
   useEffect(() => {
@@ -100,11 +161,14 @@ const AppointmentScheduler: React.FC = () => {
 
   const handleDoctorChange = (event: SelectChangeEvent) => {
     setSelectedDoctor(event.target.value);
+    setSelectedDate(null);
+    setSelectedTime("");
     setFormErrors({ ...formErrors, doctor: false });
   };
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
+    setSelectedTime("");
     setFormErrors({ ...formErrors, date: false });
   };
 
@@ -163,12 +227,6 @@ const AppointmentScheduler: React.FC = () => {
   if (error) {
     return <ErrorMessage message={error} />;
   }
-
-  // Filter out past dates
-  const today = new Date();
-  const filterDate = (date: Date) => {
-    return !isBefore(date, today);
-  };
 
   // Get doctor name for confirmation message
   const selectedDoctorName =
@@ -236,8 +294,8 @@ const AppointmentScheduler: React.FC = () => {
                 <DatePicker
                   selected={selectedDate}
                   onChange={handleDateChange}
-                  minDate={today}
-                  maxDate={addDays(today, 30)}
+                  minDate={new Date()}
+                  maxDate={addDays(new Date(), 30)}
                   placeholderText="Select a date"
                   filterDate={filterDate}
                   dateFormat="MMMM d, yyyy"
