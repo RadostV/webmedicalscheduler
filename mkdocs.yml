@@ -1,0 +1,93 @@
+site_name: Medical Appointment System Documentation
+site_description: Documentation for the Medical Appointment System APIs and usage guides
+site_author: Medical Appointment Team
+
+# Repository
+repo_name: Medical Appointment System
+repo_url: https://github.com/yourusername/medical-appointment-system
+
+# Configuration
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: light blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - search.highlight
+    - search.share
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+# Extensions
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+# JavaScript for Mermaid
+extra_javascript:
+  - https://unpkg.com/mermaid@10.0.2/dist/mermaid.min.js
+
+# Plugins
+plugins:
+  - search
+  - minify:
+      minify_html: true
+  - pdf-export:
+      combined: true
+      combined_output_path: pdf/medical-appointment-system-documentation.pdf
+      enabled_if_env: ENABLE_PDF_EXPORT
+
+# Page tree
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: guides/installation.md
+    - Architecture Overview: guides/architecture.md
+  - Backend API:
+    - Overview: api/backend/index.md
+    - Authentication: api/backend/auth.md
+    - Doctor: api/backend/doctor.md
+    - Patient: api/backend/patient.md
+  - Frontend API:
+    - Overview: api/frontend/index.md
+    - Authentication: api/frontend/auth.md
+    - Doctor: api/frontend/doctor.md
+    - Patient: api/frontend/patient.md
+  - Guides:
+    - User Guide: guides/user-guide.md
+    - Developer Guide: guides/developer-guide.md
+    - API Documentation: guides/api-documentation.md
+    - Database Schema: guides/database-schema.md
+    - Deployment Guide: guides/deployment-guide.md
+    - Testing Guide: guides/testing-guide.md
+    - Documentation Guide: guides/documentation-guide.md
+
+# Extra
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername
+  version:
+    provider: mike
+
+# Extra CSS
+extra_css:
+  - css/extra.css 
