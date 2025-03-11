@@ -23,6 +23,7 @@ import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
 import Modal from "../../components/shared/Modal";
+import { doctorService } from "../../services/doctor/doctor.service";
 import {
   Appointment,
   AppointmentStatus,
@@ -52,46 +53,8 @@ const Schedule: React.FC = () => {
     const fetchAppointments = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // Mock data for now
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const mockAppointments: Appointment[] = [
-          {
-            id: "1",
-            patientId: "1",
-            patientName: "John Smith",
-            doctorId: "2",
-            dateTime: new Date(2023, 5, 15, 10, 30).toISOString(),
-            status: "scheduled",
-          },
-          {
-            id: "2",
-            patientId: "4",
-            patientName: "Emma Wilson",
-            doctorId: "2",
-            dateTime: new Date(2023, 5, 15, 14, 0).toISOString(),
-            status: "scheduled",
-          },
-          {
-            id: "3",
-            patientId: "5",
-            patientName: "Michael Brown",
-            doctorId: "2",
-            dateTime: new Date(2023, 5, 16, 9, 0).toISOString(),
-            status: "scheduled",
-          },
-          {
-            id: "4",
-            patientId: "2",
-            patientName: "Sarah Johnson",
-            doctorId: "2",
-            dateTime: new Date(2023, 5, 14, 11, 0).toISOString(),
-            status: "completed",
-          },
-        ];
-
-        setAppointments(mockAppointments);
+        const fetchedAppointments = await doctorService.getAppointments();
+        setAppointments(fetchedAppointments);
         setError(null);
       } catch (err) {
         setError("Failed to fetch appointments. Please try again later.");
@@ -102,7 +65,7 @@ const Schedule: React.FC = () => {
     };
 
     fetchAppointments();
-  }, [token]);
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -138,8 +101,10 @@ const Schedule: React.FC = () => {
     if (!selectedAppointment) return;
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await doctorService.updateAppointmentStatus(
+        selectedAppointment.id,
+        status
+      );
 
       // Update the local state
       setAppointments((prevAppointments) =>

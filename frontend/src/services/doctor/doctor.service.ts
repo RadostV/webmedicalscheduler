@@ -1,5 +1,5 @@
 import api from '../../config/api.config';
-import { Appointment } from '../../types/appointment';
+import { Appointment, AppointmentStatus } from '../../types/shared/appointment.types';
 import { Availability, AvailabilityRequest } from '../../types/doctor';
 
 export const doctorService = {
@@ -20,5 +20,9 @@ export const doctorService = {
 
   async deleteAvailability(availabilityId: string): Promise<void> {
     await api.delete(`/doctors/availability/${availabilityId}`);
+  },
+
+  async updateAppointmentStatus(appointmentId: string, status: AppointmentStatus): Promise<void> {
+    await api.patch(`/doctors/appointments/${appointmentId}/status`, { status });
   }
 }; 
