@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -25,7 +25,6 @@ import { TimeSlot } from "../../types/appointment";
 import { patientService } from "../../services/patient/patient.service";
 
 const AppointmentScheduler: React.FC = () => {
-  const { token } = useAuth();
   const navigate = useNavigate();
 
   // State
@@ -62,17 +61,7 @@ const AppointmentScheduler: React.FC = () => {
     fetchDoctors();
   }, []);
 
-  // Fetch time slots when doctor and date are selected
-  useEffect(() => {
-    if (selectedDoctor && selectedDate) {
-      fetchTimeSlots();
-    } else {
-      setTimeSlots([]);
-      setSelectedTime("");
-    }
-  }, [selectedDoctor, selectedDate]);
-
-  const fetchTimeSlots = async () => {
+  const fetchTimeSlots = useCallback(async () => {
     if (!selectedDoctor || !selectedDate) return;
 
     setLoading(true);
@@ -97,7 +86,17 @@ const AppointmentScheduler: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDoctor, selectedDate]);
+
+  // Fetch time slots when doctor and date are selected
+  useEffect(() => {
+    if (selectedDoctor && selectedDate) {
+      fetchTimeSlots();
+    } else {
+      setTimeSlots([]);
+      setSelectedTime("");
+    }
+  }, [selectedDoctor, selectedDate, fetchTimeSlots]);
 
   const handleDoctorChange = (event: SelectChangeEvent) => {
     setSelectedDoctor(event.target.value);
@@ -173,7 +172,7 @@ const AppointmentScheduler: React.FC = () => {
 
   // Get doctor name for confirmation message
   const selectedDoctorName =
-    doctors.find((doctor) => doctor.id === selectedDoctor)?.name || "";
+    doctors.find((doctor) => doctor.userId === selectedDoctor)?.name || "";
 
   // Format date and time for confirmation message
   const formattedDate = selectedDate
@@ -202,7 +201,7 @@ const AppointmentScheduler: React.FC = () => {
                 onChange={handleDoctorChange}
               >
                 {doctors.map((doctor) => (
-                  <MenuItem key={doctor.id} value={doctor.id}>
+                  <MenuItem key={doctor.id} value={doctor.userId}>
                     {doctor.name} - {doctor.specialty}
                   </MenuItem>
                 ))}

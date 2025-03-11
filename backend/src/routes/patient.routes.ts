@@ -6,7 +6,7 @@ import { validateRequest } from '../middleware/validate.middleware';
 const router = Router();
 
 interface CreateAppointmentRequest {
-  doctorId: number;
+  doctorId: string; // This is the user ID of the doctor
   dateTime: string;
 }
 
@@ -21,8 +21,8 @@ interface CreateAppointmentRequest {
  *         - dateTime
  *       properties:
  *         doctorId:
- *           type: integer
- *           description: ID of the doctor
+ *           type: string
+ *           description: The user ID of the doctor (not the doctor profile ID)
  *         dateTime:
  *           type: string
  *           format: date-time
@@ -93,7 +93,7 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
 
 // Create appointment validation
 const createAppointmentValidation = [
-  body('doctorId').isInt().withMessage('Doctor ID must be an integer'),
+  body('doctorId').isString().withMessage('Doctor ID must be a string'),
   body('dateTime').isISO8601().withMessage('Invalid date format'),
 ];
 
@@ -102,6 +102,7 @@ const createAppointmentValidation = [
  * /api/patients/appointments:
  *   post:
  *     summary: Create a new appointment
+ *     description: Creates a new appointment using the doctor's user ID (not the doctor profile ID)
  *     tags: [Patients]
  *     security:
  *       - bearerAuth: []
@@ -142,11 +143,13 @@ router.post(
       const { doctorId, dateTime } = req.body;
       const appointmentDate = new Date(dateTime);
 
-      // Check if doctor exists
-      const doctor = await prisma.user.findFirst({
+      // Check if doctor exists by user ID
+      const doctor = await prisma.doctor.findFirst({
         where: {
-          id: doctorId,
-          type: 'doctor',
+          userId: parseInt(doctorId),
+        },
+        include: {
+          user: true,
         },
       });
 
@@ -160,9 +163,7 @@ router.post(
 
       const availability = await prisma.availability.findFirst({
         where: {
-          doctor: {
-            userId: doctorId,
-          },
+          doctorId: doctor.id,
           dayOfWeek,
           startTime: {
             lte: timeString,
@@ -180,7 +181,7 @@ router.post(
       // Check for existing appointments at the same time
       const existingAppointment = await prisma.appointment.findFirst({
         where: {
-          doctorId,
+          doctorId: doctor.userId,
           dateTime: appointmentDate,
         },
       });
@@ -193,7 +194,7 @@ router.post(
       const appointment = await prisma.appointment.create({
         data: {
           patientId: req.user!.id,
-          doctorId,
+          doctorId: doctor.userId,
           dateTime: appointmentDate,
         },
         include: {
@@ -207,6 +208,7 @@ router.post(
 
       return res.status(201).json(appointment);
     } catch (error) {
+      console.error('Error creating appointment:', error);
       return res.status(500).json({ error: 'Failed to create appointment' });
     }
   }

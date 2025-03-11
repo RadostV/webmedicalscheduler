@@ -50,6 +50,59 @@ const setAvailabilityValidation = [
 
 /**
  * @swagger
+ * /api/doctors:
+ *   get:
+ *     summary: Get all doctors
+ *     tags: [Doctors]
+ *     responses:
+ *       200:
+ *         description: List of doctors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   userId:
+ *                     type: integer
+ *                   specialty:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *       500:
+ *         description: Failed to fetch doctors
+ */
+router.get('/', async (_req: Request, res: Response): Promise<Response> => {
+  try {
+    const doctors = await prisma.doctor.findMany({
+      include: {
+        user: {
+          select: {
+            username: true,
+          },
+        },
+      },
+    });
+
+    // Transform the response to match the frontend Doctor type
+    const formattedDoctors = doctors.map(doctor => ({
+      id: doctor.id.toString(),
+      userId: doctor.userId.toString(),
+      specialty: doctor.specialty,
+      name: doctor.user.username,
+    }));
+
+    return res.json(formattedDoctors);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch doctors' });
+  }
+});
+
+/**
+ * @swagger
  * /api/doctors/appointments:
  *   get:
  *     summary: Get doctor's appointments
@@ -388,6 +441,97 @@ router.get('/slots', async (req: Request, res: Response): Promise<Response> => {
 
     return res.json(availableSlots);
   } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch available slots' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/doctors/{id}/slots:
+ *   get:
+ *     summary: Get available time slots for a specific doctor on a specific date
+ *     tags: [Doctors]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Doctor ID
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Date to check availability (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: List of available time slots
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: string
+ *                 pattern: '^([01]\d|2[0-3]):([0-5]\d)$'
+ *       400:
+ *         description: Date parameter is required
+ *       404:
+ *         description: No availability found for this day
+ *       500:
+ *         description: Failed to fetch available slots
+ */
+router.get('/:id/slots', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const dateStr = req.query.date as string;
+    if (!dateStr) {
+      return res.status(400).json({ error: 'Date parameter is required' });
+    }
+
+    const date = new Date(dateStr);
+    const dayOfWeek = date.getDay();
+
+    const doctorProfile = await prisma.doctor.findFirst({
+      where: {
+        userId: parseInt(req.params.id),
+      },
+      include: {
+        availability: {
+          where: {
+            dayOfWeek,
+          },
+        },
+      },
+    });
+
+    if (!doctorProfile || !doctorProfile.availability.length) {
+      return res.status(404).json({ error: 'No availability found for this day' });
+    }
+
+    const availability = doctorProfile.availability[0];
+    const slots = generateTimeSlots(date, availability.startTime, availability.endTime);
+
+    // Filter out slots that are already booked
+    const bookedAppointments = await prisma.appointment.findMany({
+      where: {
+        doctorId: doctorProfile.userId,
+        dateTime: {
+          gte: new Date(date.setHours(0, 0, 0, 0)),
+          lt: new Date(date.setHours(24, 0, 0, 0)),
+        },
+      },
+    });
+
+    const bookedTimes = new Set(
+      bookedAppointments.map((apt) => apt.dateTime.toTimeString().slice(0, 5))
+    );
+
+    const availableSlots = slots.filter((slot) => !bookedTimes.has(slot));
+
+    return res.json(availableSlots);
+  } catch (error) {
+    console.error('Error fetching slots:', error);
     return res.status(500).json({ error: 'Failed to fetch available slots' });
   }
 });
