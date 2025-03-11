@@ -75,9 +75,16 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
       },
       include: {
         doctor: {
-          include: {
-            doctorProfile: true,
-          },
+          select: {
+            id: true,
+            username: true,
+            doctorProfile: {
+              select: {
+                id: true,
+                specialty: true
+              }
+            }
+          }
         },
       },
       orderBy: {
@@ -85,7 +92,22 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
       },
     });
 
-    return res.json(appointments);
+    // Transform the response to match the frontend types
+    const formattedAppointments = appointments.map(appointment => ({
+      id: appointment.id.toString(),
+      patientId: appointment.patientId.toString(),
+      doctorId: appointment.doctorId.toString(),
+      dateTime: appointment.dateTime.toISOString(),
+      status: appointment.status,
+      doctor: {
+        id: appointment.doctor.doctorProfile?.id.toString() || '',
+        userId: appointment.doctor.id.toString(),
+        name: appointment.doctor.username,
+        specialty: appointment.doctor.doctorProfile?.specialty || ''
+      }
+    }));
+
+    return res.json(formattedAppointments);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch appointments' });
   }
