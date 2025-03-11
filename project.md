@@ -14,7 +14,7 @@ You are tasked with developing a full-stack web-based medical scheduling appoint
 
 - **Frontend**: React.js with React Router for navigation.
 - **Backend**: Node.js with Express.js.
-- **Database**: MongoDB (using Mongoose for schema management).
+- **Database**: SQLite3 with Prisma ORM for type-safe database operations.
 - **Authentication**: JSON Web Tokens (JWT) for secure user authentication.
 - **Styling**: Material-UI for a consistent and responsive UI (with CSS modules as a fallback).
 - **Additional Libraries**:
@@ -151,38 +151,66 @@ Below are the required components, their purposes, and key features:
   - express.json(): Parse JSON request bodies.
   - Custom JWT middleware: Verify tokens for protected routes.
 
-### 2. Database Schema (MongoDB with Mongoose)
+### 2. Database Schema (SQLite with Prisma)
 
-Define the following models:
+The following schema will be defined in Prisma:
 
-#### User:
+```prisma
+// Schema for the Medical Scheduling Application
 
-- id: ObjectId (auto-generated).
-- username: String, required, unique.
-- password: String, required (hashed with bcrypt).
-- type: String, required (enum: "patient", "doctor").
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String   // Hashed with bcrypt
+  type      String   // "patient" or "doctor"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-#### Doctor:
+  // Relations
+  doctorProfile     Doctor?        // If user is a doctor
+  patientAppointments Appointment[] @relation("PatientAppointments")
+  doctorAppointments  Appointment[] @relation("DoctorAppointments")
+}
 
-- id: ObjectId (auto-generated).
-- userId: ObjectId (reference to User), required.
-- specialty: String, required (e.g., "General Practice").
+model Doctor {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  specialty  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-#### Appointment:
+  // Relations
+  user         User          @relation(fields: [userId], references: [id])
+  availability Availability[]
+}
 
-- id: ObjectId (auto-generated).
-- patientId: ObjectId (reference to User), required.
-- doctorId: ObjectId (reference to User), required.
-- dateTime: Date, required (e.g., "2023-11-01T09:30:00Z").
-- status: String, default "scheduled" (enum: "scheduled", "completed", "cancelled").
+model Appointment {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  dateTime  DateTime
+  status    String   @default("scheduled") // "scheduled", "completed", "cancelled"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-#### Availability:
+  // Relations
+  patient   User     @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor    User     @relation("DoctorAppointments", fields: [doctorId], references: [id])
+}
 
-- id: ObjectId (auto-generated).
-- doctorId: ObjectId (reference to User), required.
-- dayOfWeek: Number, required (0 = Sunday, 1 = Monday, ..., 6 = Saturday).
-- startTime: String, required (e.g., "09:00").
-- endTime: String, required (e.g., "17:00").
+model Availability {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime String   // Format: "HH:mm"
+  endTime   String   // Format: "HH:mm"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
+```
 
 ### 3. API Endpoints
 
