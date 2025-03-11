@@ -20,8 +20,9 @@ import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
 import Modal from "../../components/shared/Modal";
-import { Doctor } from "../../types/doctor/doctor.types";
-import { TimeSlot } from "../../types/shared/appointment.types";
+import { Doctor } from "../../types/doctor";
+import { TimeSlot } from "../../types/appointment";
+import { patientService } from "../../services/patient/patient.service";
 
 const AppointmentScheduler: React.FC = () => {
   const { token } = useAuth();
@@ -47,32 +48,9 @@ const AppointmentScheduler: React.FC = () => {
     const fetchDoctors = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // Mock data for now
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const mockDoctors: Doctor[] = [
-          {
-            id: "2",
-            userId: "2",
-            specialty: "Cardiology",
-            name: "Dr. Jane Smith",
-          },
-          {
-            id: "3",
-            userId: "3",
-            specialty: "Dermatology",
-            name: "Dr. John Doe",
-          },
-          {
-            id: "4",
-            userId: "4",
-            specialty: "Pediatrics",
-            name: "Dr. Sarah Johnson",
-          },
-        ];
-
-        setDoctors(mockDoctors);
+        const doctorsList = await patientService.getDoctors();
+        setDoctors(doctorsList);
+        setError(null);
       } catch (err) {
         setError("Failed to fetch doctors. Please try again later.");
         console.error(err);
@@ -82,7 +60,7 @@ const AppointmentScheduler: React.FC = () => {
     };
 
     fetchDoctors();
-  }, [token]);
+  }, []);
 
   // Fetch time slots when doctor and date are selected
   useEffect(() => {
@@ -92,7 +70,6 @@ const AppointmentScheduler: React.FC = () => {
       setTimeSlots([]);
       setSelectedTime("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDoctor, selectedDate]);
 
   const fetchTimeSlots = async () => {
@@ -100,25 +77,20 @@ const AppointmentScheduler: React.FC = () => {
 
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // Mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const slots = await patientService.getDoctorSlots(
+        selectedDoctor,
+        formattedDate
+      );
 
-      const mockTimeSlots: TimeSlot[] = [
-        { time: "09:00", available: true },
-        { time: "09:30", available: true },
-        { time: "10:00", available: false },
-        { time: "10:30", available: true },
-        { time: "11:00", available: true },
-        { time: "11:30", available: false },
-        { time: "13:00", available: true },
-        { time: "13:30", available: true },
-        { time: "14:00", available: true },
-        { time: "14:30", available: false },
-        { time: "15:00", available: true },
-      ];
+      // Convert slots to TimeSlot format with proper typing
+      const timeSlots: TimeSlot[] = slots.map((time: string) => ({
+        time,
+        available: true,
+      }));
 
-      setTimeSlots(mockTimeSlots);
+      setTimeSlots(timeSlots);
+      setError(null);
     } catch (err) {
       setError("Failed to fetch available time slots. Please try again later.");
       console.error(err);
@@ -164,9 +136,14 @@ const AppointmentScheduler: React.FC = () => {
 
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // Mock appointment creation for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const dateTime = new Date(selectedDate);
+      const [hours, minutes] = selectedTime.split(":");
+      dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+      await patientService.scheduleAppointment({
+        doctorId: selectedDoctor,
+        dateTime: dateTime.toISOString(),
+      });
 
       // Close modal and redirect to appointments page
       setModalOpen(false);

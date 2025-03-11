@@ -1,5 +1,6 @@
 import api from '../../config/api.config';
 import { Appointment, AppointmentRequest } from '../../types/appointment';
+import { Doctor } from '../../types/doctor';
 
 export const patientService = {
   async getAppointments(): Promise<Appointment[]> {
@@ -12,13 +13,13 @@ export const patientService = {
     return response.data;
   },
 
-  async getDoctors() {
-    const response = await api.get('/doctors');
+  async getDoctors(): Promise<Doctor[]> {
+    const response = await api.get<Doctor[]>('/doctors');
     return response.data;
   },
 
-  async getDoctorSlots(doctorId: number, date: string) {
-    const response = await api.get(`/doctors/${doctorId}/slots`, {
+  async getDoctorSlots(doctorId: string, date: string): Promise<string[]> {
+    const response = await api.get<string[]>(`/doctors/${doctorId}/slots`, {
       params: { date }
     });
     return response.data;

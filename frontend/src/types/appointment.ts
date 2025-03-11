@@ -1,18 +1,24 @@
+import { Doctor } from './doctor';
+
 export interface Appointment {
-  id: number;
-  patientId: number;
-  doctorId: number;
-  dateTime: string;
+  id: string;
+  patientId: string;
+  doctorId: string;
+  dateTime: string; // ISO 8601 format
   status: 'scheduled' | 'completed' | 'cancelled';
-  doctor?: {
-    username: string;
-  };
+  doctor?: Doctor;
   patient?: {
+    id: string;
     username: string;
   };
 }
 
 export interface AppointmentRequest {
-  doctorId: number;
-  dateTime: string;
+  doctorId: string;
+  dateTime: string; // ISO 8601 format
+}
+
+export interface TimeSlot {
+  time: string; // Format: "HH:mm"
+  available: boolean;
 } 
