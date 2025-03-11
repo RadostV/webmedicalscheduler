@@ -23,6 +23,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
+import SuccessMessage from "../../components/shared/SuccessMessage";
 import Modal from "../../components/shared/Modal";
 import { format } from "date-fns";
 import { doctorService } from "../../services/doctor/doctor.service";
@@ -229,7 +230,7 @@ const AvailabilityManager: React.FC = () => {
 
       {successMessage && (
         <Box sx={{ mb: 2 }}>
-          <ErrorMessage message={successMessage} title="Success" />
+          <SuccessMessage message={successMessage} />
         </Box>
       )}
 

@@ -1,11 +1,25 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { AuthState, User, LoginRequest } from "../../types/shared/auth.types";
+import {
+  AuthState,
+  User,
+  LoginRequest,
+  AuthResponse,
+} from "../../types/shared/auth.types";
 import api from "../../config/api.config";
+import { authService } from "../../services/shared/auth.service";
+
+interface RegisterRequest {
+  username: string;
+  password: string;
+  type: "patient" | "doctor";
+  specialty?: string;
+}
 
 // Define the interface for the context value
 interface AuthContextValue extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
+  register: (data: RegisterRequest) => Promise<void>;
 }
 
 // Initial state for auth
@@ -127,11 +141,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: "LOGOUT" });
   };
 
+  // Register function
+  const register = async (data: RegisterRequest): Promise<void> => {
+    dispatch({ type: "LOGIN_REQUEST" });
+
+    try {
+      const response = await authService.register(data);
+
+      // Store token and user in local storage
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+
+      // Update state
+      dispatch({
+        type: "LOGIN_SUCCESS",
+        payload: { user: response.user, token: response.token },
+      });
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || error.message || "Failed to register";
+      dispatch({
+        type: "LOGIN_FAILURE",
+        payload: errorMessage,
+      });
+      throw new Error(errorMessage);
+    }
+  };
+
   // Provide the context value
   const value = {
     ...state,
     login,
     logout,
+    register,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

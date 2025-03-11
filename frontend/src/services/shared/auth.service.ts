@@ -1,10 +1,52 @@
 import api from '../../config/api.config';
-import { LoginCredentials, AuthResponse } from '../../types/auth';
+import { LoginRequest, AuthResponse, User } from '../../types/shared/auth.types';
+
+interface ApiResponse {
+  token: string;
+  user: {
+    id: number;
+    username: string;
+    type: 'patient' | 'doctor';
+    doctorProfile?: {
+      id: number;
+      specialty: string;
+    };
+  };
+}
+
+interface RegisterRequest {
+  username: string;
+  password: string;
+  type: 'patient' | 'doctor';
+  specialty?: string;
+}
+
+const convertUser = (apiUser: ApiResponse['user']): User => ({
+  ...apiUser,
+  id: apiUser.id.toString(),
+  doctorProfile: apiUser.doctorProfile
+    ? {
+        ...apiUser.doctorProfile,
+        id: apiUser.doctorProfile.id.toString(),
+      }
+    : undefined,
+});
 
 export const authService = {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
-    return response.data;
+  async login(credentials: LoginRequest): Promise<AuthResponse> {
+    const response = await api.post<ApiResponse>('/auth/login', credentials);
+    return {
+      token: response.data.token,
+      user: convertUser(response.data.user),
+    };
+  },
+
+  async register(data: RegisterRequest): Promise<AuthResponse> {
+    const response = await api.post<ApiResponse>('/auth/register', data);
+    return {
+      token: response.data.token,
+      user: convertUser(response.data.user),
+    };
   },
 
   logout(): void {
@@ -12,12 +54,15 @@ export const authService = {
     localStorage.removeItem('user');
   },
 
-  getCurrentUser(): any {
+  getCurrentUser(): User | null {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    if (!userStr) return null;
+    
+    const user = JSON.parse(userStr);
+    return convertUser(user);
   },
 
-  setAuthData(token: string, user: any): void {
+  setAuthData(token: string, user: User): void {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
   }

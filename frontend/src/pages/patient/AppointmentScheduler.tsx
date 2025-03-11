@@ -26,6 +26,7 @@ import {
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
+import SuccessMessage from "../../components/shared/SuccessMessage";
 import Modal from "../../components/shared/Modal";
 import { Doctor } from "../../types/doctor";
 import { TimeSlot } from "../../types/appointment";
@@ -51,6 +52,7 @@ const AppointmentScheduler: React.FC = () => {
     date: false,
     time: false,
   });
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Function to check available slots for a date range
   const checkAvailableDates = useCallback(
@@ -259,9 +261,14 @@ const AppointmentScheduler: React.FC = () => {
         dateTime: dateTime.toISOString(),
       });
 
-      // Close modal and redirect to appointments page
+      // Show success message
+      setSuccessMessage("Appointment scheduled successfully");
       setModalOpen(false);
-      navigate("/patient/appointments");
+
+      // Redirect after a short delay to show the success message
+      setTimeout(() => {
+        navigate("/patient/appointments");
+      }, 2000);
     } catch (err) {
       setError("Failed to schedule appointment. Please try again later.");
       console.error(err);
@@ -296,6 +303,9 @@ const AppointmentScheduler: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Schedule an Appointment
       </Typography>
+
+      {error && <ErrorMessage message={error} />}
+      {successMessage && <SuccessMessage message={successMessage} />}
 
       <Paper sx={{ p: 3, mt: 3 }}>
         <Grid container spacing={3}>

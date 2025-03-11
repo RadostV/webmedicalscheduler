@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useLocation, Navigate } from "react-router-dom";
+import { useLocation, Navigate, Link } from "react-router-dom";
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import {
@@ -126,27 +126,27 @@ const Login: React.FC = () => {
                   variant="contained"
                   color="primary"
                   disabled={loading || isSubmitting}
-                  sx={{ mt: 3, mb: 2 }}
+                  sx={{ mt: 3 }}
                 >
                   {loading || isSubmitting ? (
-                    <CircularProgress size={24} />
+                    <CircularProgress size={24} color="inherit" />
                   ) : (
                     "Login"
                   )}
                 </Button>
+
+                <Button
+                  component={Link}
+                  to="/register"
+                  fullWidth
+                  variant="text"
+                  sx={{ mt: 2 }}
+                >
+                  Don't have an account? Register
+                </Button>
               </Form>
             )}
           </Formik>
-
-          <Box mt={2}>
-            <Typography variant="body2" color="textSecondary" align="center">
-              Demo accounts:
-              <br />
-              Patient: username "patient", password "password"
-              <br />
-              Doctor: username "doctor", password "password"
-            </Typography>
-          </Box>
         </Paper>
       </Box>
     </Container>

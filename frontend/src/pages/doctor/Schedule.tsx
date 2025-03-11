@@ -22,6 +22,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
+import SuccessMessage from "../../components/shared/SuccessMessage";
 import Modal from "../../components/shared/Modal";
 import { doctorService } from "../../services/doctor/doctor.service";
 import {
@@ -37,16 +38,17 @@ const Schedule: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState<number>(0);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalData, setModalData] = useState<{
     title: string;
     message: string;
-    action: () => void;
+    action: () => Promise<void>;
   }>({
     title: "",
     message: "",
-    action: () => {},
+    action: async () => {},
   });
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
@@ -109,6 +111,14 @@ const Schedule: React.FC = () => {
             )
           );
 
+          // Show success message
+          const successMsg =
+            status === "completed"
+              ? "Appointment marked as completed successfully"
+              : "Appointment cancelled successfully";
+          setSuccessMessage(successMsg);
+          setTimeout(() => setSuccessMessage(null), 3000);
+
           setModalOpen(false);
           setError(null);
         } catch (err) {
@@ -135,6 +145,19 @@ const Schedule: React.FC = () => {
         return "error";
       default:
         return "default";
+    }
+  };
+
+  const getStatusColor = (status: AppointmentStatus) => {
+    switch (status) {
+      case "scheduled":
+        return "#1976d2"; // primary blue
+      case "completed":
+        return "#2e7d32"; // success green
+      case "cancelled":
+        return "#d32f2f"; // error red
+      default:
+        return "#757575"; // default gray
     }
   };
 
@@ -171,6 +194,8 @@ const Schedule: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         My Schedule
       </Typography>
+
+      {successMessage && <SuccessMessage message={successMessage} />}
 
       <Paper sx={{ mt: 3 }}>
         <Tabs
@@ -277,16 +302,27 @@ const Schedule: React.FC = () => {
                   const status = eventInfo.event.extendedProps
                     .status as AppointmentStatus;
                   return (
-                    <Box sx={{ p: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                    <Box
+                      sx={{
+                        p: 0.5,
+                        height: "100%",
+                        width: "100%",
+                        backgroundColor: getStatusColor(status),
+                        color: "#fff",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {eventInfo.event.title}
                       </Typography>
-                      <Chip
-                        label={status.charAt(0).toUpperCase() + status.slice(1)}
-                        color={getStatusChipColor(status)}
-                        size="small"
-                        sx={{ mt: 0.5 }}
-                      />
                     </Box>
                   );
                 }}
