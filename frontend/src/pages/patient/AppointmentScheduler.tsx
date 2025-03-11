@@ -15,15 +15,7 @@ import {
 } from "@mui/material";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import {
-  format,
-  addDays,
-  isBefore,
-  getDay,
-  startOfMonth,
-  endOfMonth,
-} from "date-fns";
-import { useAuth } from "../../contexts/shared/AuthContext";
+import { format, addDays, isBefore, startOfMonth, endOfMonth } from "date-fns";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
 import SuccessMessage from "../../components/shared/SuccessMessage";
@@ -31,8 +23,6 @@ import Modal from "../../components/shared/Modal";
 import { Doctor } from "../../types/doctor";
 import { TimeSlot } from "../../types/appointment";
 import { patientService } from "../../services/patient/patient.service";
-import { doctorService } from "../../services/doctor/doctor.service";
-import { Availability } from "../../types/doctor";
 
 const AppointmentScheduler: React.FC = () => {
   const navigate = useNavigate();

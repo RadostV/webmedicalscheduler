@@ -14,7 +14,6 @@ import {
   Chip,
 } from "@mui/material";
 import { format } from "date-fns";
-import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
 import { Appointment } from "../../types/appointment";

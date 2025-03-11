@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -20,7 +20,6 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
 import SuccessMessage from "../../components/shared/SuccessMessage";
@@ -34,7 +33,6 @@ interface DayAvailability extends Availability {
 }
 
 const AvailabilityManager: React.FC = () => {
-  const { token } = useAuth();
   const [availabilities, setAvailabilities] = useState<DayAvailability[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -56,16 +54,19 @@ const AvailabilityManager: React.FC = () => {
     timeRange: false,
   });
 
-  // Days of the week mapping
-  const daysOfWeek = [
-    { value: 0, label: "Sunday" },
-    { value: 1, label: "Monday" },
-    { value: 2, label: "Tuesday" },
-    { value: 3, label: "Wednesday" },
-    { value: 4, label: "Thursday" },
-    { value: 5, label: "Friday" },
-    { value: 6, label: "Saturday" },
-  ];
+  // Days of the week mapping - wrapped in useMemo to prevent re-creation on each render
+  const daysOfWeek = useMemo(
+    () => [
+      { value: 0, label: "Sunday" },
+      { value: 1, label: "Monday" },
+      { value: 2, label: "Tuesday" },
+      { value: 3, label: "Wednesday" },
+      { value: 4, label: "Thursday" },
+      { value: 5, label: "Friday" },
+      { value: 6, label: "Saturday" },
+    ],
+    []
+  );
 
   useEffect(() => {
     const fetchAvailability = async () => {
@@ -94,7 +95,7 @@ const AvailabilityManager: React.FC = () => {
     };
 
     fetchAvailability();
-  }, []);
+  }, [daysOfWeek]);
 
   const handleDayChange = (event: SelectChangeEvent<number | "">) => {
     setDayOfWeek(event.target.value as number);

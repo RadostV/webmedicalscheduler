@@ -1,10 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
-import {
-  AuthState,
-  User,
-  LoginRequest,
-  AuthResponse,
-} from "../../types/shared/auth.types";
+import { AuthState, User, LoginRequest } from "../../types/shared/auth.types";
 import api from "../../config/api.config";
 import { authService } from "../../services/shared/auth.service";
 

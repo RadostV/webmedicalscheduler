@@ -19,7 +19,6 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { useAuth } from "../../contexts/shared/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 import ErrorMessage from "../../components/shared/ErrorMessage";
 import SuccessMessage from "../../components/shared/SuccessMessage";
@@ -30,11 +29,8 @@ import {
   AppointmentStatus,
   CalendarEvent,
 } from "../../types/shared/appointment.types";
-import { useNavigate } from "react-router-dom";
 
 const Schedule: React.FC = () => {
-  const { token } = useAuth();
-  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
