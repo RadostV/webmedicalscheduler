@@ -1,22 +1,16 @@
-import React from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button,
-} from "@mui/material";
+import React from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 
 interface ModalProps {
   open: boolean;
   title: string;
-  message: string;
+  message?: string;
   onConfirm?: () => void;
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
   customActions?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -25,15 +19,17 @@ const Modal: React.FC<ModalProps> = ({
   message,
   onConfirm,
   onCancel,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   customActions,
+  children,
 }) => {
   return (
     <Dialog open={open} onClose={onCancel}>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <DialogContentText>{message}</DialogContentText>
+        {message && <DialogContentText>{message}</DialogContentText>}
+        {children}
       </DialogContent>
       <DialogActions>
         {customActions || (

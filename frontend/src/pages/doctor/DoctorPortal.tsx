@@ -1,10 +1,11 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { Container } from "@mui/material";
-import Navbar from "../../components/shared/Navbar";
-import Schedule from "./Schedule";
-import AvailabilityManager from "./AvailabilityManager";
-import ProtectedRoute from "../../components/shared/ProtectedRoute";
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Container } from '@mui/material';
+import Navbar from '../../components/shared/Navbar';
+import Schedule from './Schedule';
+import AvailabilityManager from './AvailabilityManager';
+import ProfileEditor from '../../components/doctor/ProfileEditor';
+import ProtectedRoute from '../../components/shared/ProtectedRoute';
 
 const DoctorPortal: React.FC = () => {
   return (
@@ -15,7 +16,7 @@ const DoctorPortal: React.FC = () => {
           <Route
             path="schedule"
             element={
-              <ProtectedRoute allowedUserTypes={["doctor"]}>
+              <ProtectedRoute requiredRole="doctor">
                 <Schedule />
               </ProtectedRoute>
             }
@@ -23,8 +24,16 @@ const DoctorPortal: React.FC = () => {
           <Route
             path="availability"
             element={
-              <ProtectedRoute allowedUserTypes={["doctor"]}>
+              <ProtectedRoute requiredRole="doctor">
                 <AvailabilityManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute requiredRole="doctor">
+                <ProfileEditor />
               </ProtectedRoute>
             }
           />

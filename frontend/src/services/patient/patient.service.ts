@@ -1,27 +1,36 @@
 import api from '../../config/api.config';
-import { Appointment, AppointmentRequest } from '../../types/appointment';
+import { Appointment } from '../../types/shared/appointment.types';
 import { Doctor } from '../../types/doctor';
+
+export interface TimeSlot {
+  time: string; // Format: "HH:mm"
+  available: boolean;
+}
 
 export const patientService = {
   async getAppointments(): Promise<Appointment[]> {
-    const response = await api.get<Appointment[]>('/patients/appointments');
+    const response = await api.get<Appointment[]>('/api/patients/appointments');
     return response.data;
   },
 
-  async scheduleAppointment(appointmentData: AppointmentRequest): Promise<Appointment> {
-    const response = await api.post<Appointment>('/patients/appointments', appointmentData);
+  async scheduleAppointment(formData: FormData): Promise<Appointment> {
+    const response = await api.post<Appointment>('/api/patients/appointments', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
   async getDoctors(): Promise<Doctor[]> {
-    const response = await api.get<Doctor[]>('/doctors');
+    const response = await api.get<Doctor[]>('/api/doctors');
     return response.data;
   },
 
   async getDoctorSlots(doctorId: string, date: string): Promise<string[]> {
-    const response = await api.get<string[]>(`/doctors/${doctorId}/slots`, {
-      params: { date }
+    const response = await api.get<string[]>(`/api/doctors/${doctorId}/slots`, {
+      params: { date },
     });
     return response.data;
-  }
-}; 
+  },
+};

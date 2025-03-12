@@ -13,6 +13,11 @@ import {
   TableRow,
   Chip,
   Button,
+  Link,
+  IconButton,
+  Collapse,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { format } from 'date-fns';
 import FullCalendar from '@fullcalendar/react';
@@ -23,9 +28,139 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import ErrorMessage from '../../components/shared/ErrorMessage';
 import SuccessMessage from '../../components/shared/SuccessMessage';
 import Modal from '../../components/shared/Modal';
+import AppointmentCompletion from '../../components/doctor/AppointmentCompletion';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { Appointment, AppointmentStatus, CalendarEvent } from '../../types/shared/appointment.types';
-import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../config/api.config';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'scheduled':
+      return 'primary';
+    case 'completed':
+      return 'success';
+    case 'cancelled':
+      return 'error';
+    default:
+      return 'default';
+  }
+};
+
+interface ExpandableRowProps {
+  appointment: Appointment;
+}
+
+const ExpandableRow: React.FC<ExpandableRowProps> = ({ appointment }) => {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const token = localStorage.getItem('token');
+
+  const handlePrescriptionClick = (event: React.MouseEvent) => {
+    if (!token) {
+      event.preventDefault();
+      setError('Please log in to view the prescription');
+      return;
+    }
+
+    if (!appointment.hasPrescription) {
+      event.preventDefault();
+      setError('Prescription not found');
+      return;
+    }
+  };
+
+  return (
+    <>
+      <TableRow>
+        <TableCell>
+          <IconButton aria-label="expand row" size="small" onClick={() => setOpen(!open)}>
+            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+          </IconButton>
+        </TableCell>
+        <TableCell>{appointment.patientName}</TableCell>
+        <TableCell>{format(new Date(appointment.dateTime), 'MMMM d, yyyy')}</TableCell>
+        <TableCell>{format(new Date(appointment.dateTime), 'h:mm a')}</TableCell>
+        <TableCell>
+          <Chip
+            label={appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+            color={getStatusColor(appointment.status)}
+            size="small"
+          />
+        </TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
+          <Collapse in={open} timeout="auto" unmountOnExit>
+            <Box sx={{ margin: 1 }}>
+              <Typography variant="h6" gutterBottom component="div">
+                Medical Details
+              </Typography>
+              <Table size="small">
+                <TableBody>
+                  {appointment.consultationAnalysis && (
+                    <TableRow>
+                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold', width: '200px' }}>
+                        Consultation Analysis
+                      </TableCell>
+                      <TableCell>{appointment.consultationAnalysis}</TableCell>
+                    </TableRow>
+                  )}
+                  {appointment.description && (
+                    <TableRow>
+                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                        Description
+                      </TableCell>
+                      <TableCell>{appointment.description}</TableCell>
+                    </TableRow>
+                  )}
+                  {appointment.hasPrescription && (
+                    <TableRow>
+                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+                        Prescription
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={`${API_BASE_URL}/api/doctors/appointments/${appointment.id}/prescription?token=${token}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={handlePrescriptionClick}
+                          sx={{ textDecoration: 'none', color: 'primary.main' }}
+                        >
+                          View Prescription (PDF)
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!appointment.consultationAnalysis && !appointment.description && !appointment.hasPrescription && (
+                    <TableRow>
+                      <TableCell colSpan={2}>
+                        <Typography variant="body2" color="text.secondary">
+                          No medical details available
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Box>
+          </Collapse>
+        </TableCell>
+      </TableRow>
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={() => setError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
+    </>
+  );
+};
 
 const Schedule: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -45,15 +180,7 @@ const Schedule: React.FC = () => {
   });
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [actionModalOpen, setActionModalOpen] = useState(false);
-
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log('Selected appointment changed:', selectedAppointment);
-  }, [selectedAppointment]);
-
-  useEffect(() => {
-    console.log('Action modal open state changed:', actionModalOpen);
-  }, [actionModalOpen]);
+  const [completionModalOpen, setCompletionModalOpen] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -63,13 +190,6 @@ const Schedule: React.FC = () => {
     setLoading(true);
     try {
       const fetchedAppointments = await doctorService.getAppointments();
-      console.log('Fetched appointments:', fetchedAppointments);
-
-      if (fetchedAppointments.length > 0) {
-        console.log('First appointment ID:', fetchedAppointments[0].id);
-        console.log('First appointment ID type:', typeof fetchedAppointments[0].id);
-      }
-
       setAppointments(fetchedAppointments);
       setError(null);
     } catch (err) {
@@ -85,42 +205,30 @@ const Schedule: React.FC = () => {
   };
 
   const handleStatusChange = (appointment: Appointment, status: AppointmentStatus) => {
-    let title = '';
-    let message = '';
-
     if (status === 'completed') {
-      title = 'Mark as Completed';
-      message = `Are you sure you want to mark the appointment with ${appointment.patientName} as completed?`;
-    } else if (status === 'cancelled') {
-      title = 'Cancel Appointment';
-      message = `Are you sure you want to cancel the appointment with ${appointment.patientName}?`;
+      setSelectedAppointment(appointment);
+      setActionModalOpen(false);
+      setCompletionModalOpen(true);
+      return;
     }
 
     setModalData({
-      title,
-      message,
+      title: 'Cancel Appointment',
+      message: `Are you sure you want to cancel the appointment with ${appointment.patientName}?`,
       action: async () => {
         try {
           setLoading(true);
           const updatedAppointment = await doctorService.updateAppointmentStatus(appointment.id, status);
-
           setAppointments((prevAppointments) =>
-            prevAppointments.map((app) => (app.id === appointment.id ? { ...updatedAppointment } : app))
+            prevAppointments.map((app) => (app.id === appointment.id ? updatedAppointment : app))
           );
-
-          const successMsg =
-            status === 'completed'
-              ? 'Appointment marked as completed successfully'
-              : 'Appointment cancelled successfully';
-          setSuccessMessage(successMsg);
+          setSuccessMessage('Appointment cancelled successfully');
           setTimeout(() => setSuccessMessage(null), 3000);
-
           setModalOpen(false);
           setActionModalOpen(false);
           setSelectedAppointment(null);
           setError(null);
         } catch (err) {
-          console.error('Error updating appointment status:', err);
           setError(`Failed to update appointment status. Please try again later.`);
         } finally {
           setLoading(false);
@@ -131,54 +239,21 @@ const Schedule: React.FC = () => {
     setModalOpen(true);
   };
 
-  const getStatusChipColor = (status: AppointmentStatus) => {
-    switch (status) {
-      case 'scheduled':
-        return 'primary';
-      case 'completed':
-        return 'success';
-      case 'cancelled':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
-  const getStatusColor = (status: AppointmentStatus) => {
-    switch (status) {
-      case 'scheduled':
-        return '#1976d2'; // primary blue
-      case 'completed':
-        return '#2e7d32'; // success green
-      case 'cancelled':
-        return '#d32f2f'; // error red
-      default:
-        return '#757575'; // default gray
-    }
-  };
-
   const convertToCalendarEvents = (appointments: Appointment[]): CalendarEvent[] => {
-    console.log('Converting appointments to calendar events');
     return appointments.map((appointment) => {
       const startDate = new Date(appointment.dateTime);
       const endDate = new Date(startDate);
-      endDate.setMinutes(endDate.getMinutes() + 30); // Assuming 30 minute appointments
+      endDate.setMinutes(endDate.getMinutes() + 30);
 
-      // Ensure ID is a string
-      const eventId = String(appointment.id);
-
-      const event = {
-        id: eventId,
-        title: `${appointment.patientName}`,
+      return {
+        id: String(appointment.id),
+        title: appointment.patientName || 'Unknown Patient',
         start: startDate.toISOString(),
         end: endDate.toISOString(),
-        status: appointment.status,
+        status: appointment.status as AppointmentStatus,
         patientId: appointment.patientId,
-        doctorId: appointment.doctorId,
+        doctorId: appointment.doctor?.id || appointment.doctorId,
       };
-
-      console.log('Created calendar event:', event);
-      return event;
     });
   };
 
@@ -212,6 +287,7 @@ const Schedule: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
+                      <TableCell style={{ width: '50px' }} />
                       <TableCell>Patient</TableCell>
                       <TableCell>Date</TableCell>
                       <TableCell>Time</TableCell>
@@ -219,35 +295,11 @@ const Schedule: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {appointments.map((appointment) => {
-                      const appointmentDate = new Date(appointment.dateTime);
-                      return (
-                        <TableRow
-                          key={appointment.id}
-                          onClick={() => {
-                            setSelectedAppointment(appointment);
-                            setActionModalOpen(true);
-                          }}
-                          sx={{
-                            cursor: 'pointer',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                            },
-                          }}
-                        >
-                          <TableCell>{appointment.patientName}</TableCell>
-                          <TableCell>{format(appointmentDate, 'MMM dd, yyyy')}</TableCell>
-                          <TableCell>{format(appointmentDate, 'h:mm a')}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                              color={getStatusChipColor(appointment.status)}
-                              size="small"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {appointments
+                      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+                      .map((appointment) => (
+                        <ExpandableRow key={appointment.id} appointment={appointment} />
+                      ))}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -287,24 +339,12 @@ const Schedule: React.FC = () => {
                   const eventId = eventInfo.event.id;
 
                   const handleEventClick = () => {
-                    console.log('Event box clicked directly:', eventId);
-
-                    // Ensure consistent ID type comparison
                     const stringEventId = String(eventId);
-                    console.log('Converted event ID for box click:', stringEventId);
-
                     const appointment = appointments.find((app) => String(app.id) === stringEventId);
 
                     if (appointment) {
-                      console.log('Setting appointment and opening modal from box click:', appointment);
                       setSelectedAppointment(appointment);
                       setActionModalOpen(true);
-                    } else {
-                      console.log('No appointment found with ID:', stringEventId);
-                      console.log(
-                        'Available appointment IDs:',
-                        appointments.map((app) => String(app.id))
-                      );
                     }
                   };
 
@@ -341,20 +381,10 @@ const Schedule: React.FC = () => {
                   );
                 }}
                 eventClick={(clickInfo) => {
-                  console.log('Event clicked:', clickInfo.event);
-                  console.log('Event ID:', clickInfo.event.id);
-                  console.log('All appointments:', appointments);
-
-                  // Ensure consistent ID type comparison
                   const eventId = String(clickInfo.event.id);
-                  console.log('Converted event ID for comparison:', eventId);
-
                   const appointment = appointments.find((app) => String(app.id) === eventId);
 
-                  console.log('Found appointment:', appointment);
-
                   if (appointment) {
-                    console.log('Setting selected appointment and opening modal');
                     setSelectedAppointment(appointment);
                     setActionModalOpen(true);
                   }
@@ -377,77 +407,133 @@ const Schedule: React.FC = () => {
 
       <Modal
         open={actionModalOpen}
-        title="Appointment Actions"
-        message={
-          selectedAppointment
-            ? `Appointment with ${selectedAppointment.patientName} on ${format(
-                new Date(selectedAppointment.dateTime),
-                "MMM dd, yyyy 'at' h:mm a"
-              )}`
-            : 'No appointment selected'
-        }
+        title="Appointment Details"
+        message=""
         onCancel={() => {
-          console.log('Closing action modal');
           setActionModalOpen(false);
           setSelectedAppointment(null);
         }}
         customActions={
           selectedAppointment?.status === 'scheduled' ? (
-            <Box
-              sx={{
-                mt: 2,
-                display: 'flex',
-                gap: 1,
-                justifyContent: 'flex-end',
-              }}
-            >
-              <Button
-                variant="contained"
-                color="success"
-                onClick={() => {
-                  console.log('Complete button clicked');
-                  handleStatusChange(selectedAppointment, 'completed');
-                }}
-              >
-                Complete
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={() => {
-                  console.log('Cancel button clicked');
-                  handleStatusChange(selectedAppointment, 'cancelled');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  console.log('Close button clicked');
-                  setActionModalOpen(false);
-                  setSelectedAppointment(null);
-                }}
-              >
-                Close
-              </Button>
+            <Box>
+              <Box sx={{ margin: 1 }}>
+                <Typography variant="h6" gutterBottom>
+                  Appointment Information
+                </Typography>
+                <Typography>Patient: {selectedAppointment.patientName}</Typography>
+                <Typography>
+                  Date: {format(new Date(selectedAppointment.dateTime), "MMMM d, yyyy 'at' h:mm a")}
+                </Typography>
+                <Typography>
+                  Status:{' '}
+                  <Chip
+                    label={selectedAppointment.status}
+                    color={getStatusColor(selectedAppointment.status)}
+                    size="small"
+                  />
+                </Typography>
+              </Box>
+
+              <Box sx={{ mt: 3, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => {
+                    handleStatusChange(selectedAppointment, 'completed');
+                  }}
+                >
+                  Complete
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={() => {
+                    handleStatusChange(selectedAppointment, 'cancelled');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setActionModalOpen(false);
+                    setSelectedAppointment(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </Box>
             </Box>
           ) : (
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  console.log('Close button clicked');
-                  setActionModalOpen(false);
-                  setSelectedAppointment(null);
-                }}
-              >
-                Close
-              </Button>
+            <Box>
+              <Box sx={{ margin: 1 }}>
+                <Typography variant="h6" gutterBottom>
+                  Appointment Information
+                </Typography>
+                <Typography>Patient: {selectedAppointment?.patientName}</Typography>
+                <Typography>
+                  Date:{' '}
+                  {selectedAppointment
+                    ? format(new Date(selectedAppointment.dateTime), "MMMM d, yyyy 'at' h:mm a")
+                    : ''}
+                </Typography>
+                <Typography>
+                  Status:{' '}
+                  {selectedAppointment && (
+                    <Chip
+                      label={selectedAppointment.status}
+                      color={getStatusColor(selectedAppointment.status)}
+                      size="small"
+                    />
+                  )}
+                </Typography>
+              </Box>
+
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setActionModalOpen(false);
+                    setSelectedAppointment(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </Box>
             </Box>
           )
         }
       />
+
+      <Modal
+        open={completionModalOpen}
+        title="Complete Appointment"
+        message=""
+        onConfirm={() => {
+          setCompletionModalOpen(false);
+          setSelectedAppointment(null);
+          fetchAppointments();
+        }}
+        onCancel={() => {
+          setCompletionModalOpen(false);
+          setSelectedAppointment(null);
+        }}
+      >
+        {selectedAppointment && (
+          <AppointmentCompletion
+            appointmentId={selectedAppointment.id}
+            onComplete={() => {
+              setCompletionModalOpen(false);
+              setSelectedAppointment(null);
+              fetchAppointments();
+            }}
+            onCancel={() => {
+              setCompletionModalOpen(false);
+              setSelectedAppointment(null);
+            }}
+          />
+        )}
+      </Modal>
     </Box>
   );
 };

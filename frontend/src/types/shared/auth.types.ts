@@ -8,6 +8,15 @@ export interface LoginRequest {
 export interface DoctorProfile {
   id: string;
   specialty: string;
+  education: string;
+  qualification: string;
+  description: string;
+  siteUrl?: string;
+  phone: string;
+  email: string;
+  location: string;
+  languages: string;
+  photoUrl?: string;
 }
 
 export interface User {
@@ -28,4 +37,4 @@ export interface AuthState {
 export interface AuthResponse {
   token: string;
   user: User;
-} 
+}

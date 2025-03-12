@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { AuthState, User, LoginRequest, AuthResponse } from '../../types/shared/auth.types';
 import api from '../../config/api.config';
 import { authService } from '../../services/shared/auth.service';
@@ -15,6 +15,7 @@ interface AuthContextValue extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
   register: (data: RegisterRequest) => Promise<void>;
+  updateUser: (updatedUser: User) => void;
 }
 
 // Initial state for auth
@@ -74,26 +75,15 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 
 // Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Setup the reducer with the initial state
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Check for existing token on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-
-    if (token && user) {
-      try {
-        const parsedUser = JSON.parse(user);
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: { user: parsedUser, token },
-        });
-      } catch (error) {
-        // Handle invalid stored user
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) {
+      dispatch({
+        type: 'LOGIN_SUCCESS',
+        payload: { user: currentUser, token: localStorage.getItem('token') || '' },
+      });
     }
   }, []);
 
@@ -105,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post<{
         token: string;
         user: User;
-      }>('/auth/login', credentials);
+      }>('/api/auth/login', credentials);
 
       // Store token and user in local storage
       localStorage.setItem('token', response.data.token);
@@ -117,12 +107,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         payload: { user: response.data.user, token: response.data.token },
       });
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to login';
       dispatch({
         type: 'LOGIN_FAILURE',
         payload: errorMessage,
       });
-      throw new Error(errorMessage);
+      // Don't throw the error, just return to prevent page reload
+      return;
     }
   };
 
@@ -159,12 +150,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUser = (updatedUser: User) => {
+    dispatch({
+      type: 'LOGIN_SUCCESS',
+      payload: { user: updatedUser, token: localStorage.getItem('token') || '' },
+    });
+  };
+
   // Provide the context value
   const value = {
     ...state,
     login,
     logout,
     register,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

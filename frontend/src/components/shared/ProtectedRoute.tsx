@@ -1,36 +1,38 @@
-import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../contexts/shared/AuthContext";
-import { UserType } from "../../types/shared/auth.types";
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/shared/AuthContext';
+import { CircularProgress, Box } from '@mui/material';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedUserTypes?: UserType[];
+  requiredRole?: 'doctor' | 'patient';
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  allowedUserTypes,
-}) => {
-  const { isAuthenticated, user } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+  const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
 
-  // Check if the user is authenticated
-  if (!isAuthenticated) {
-    // Redirect to login page and save the location they were trying to access
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // If not authenticated, redirect to login
+  if (!isAuthenticated || !user) {
+    console.log('Not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If there are specific user types allowed, check if the user has the right type
-  if (allowedUserTypes && allowedUserTypes.length > 0 && user) {
-    if (!allowedUserTypes.includes(user.type)) {
-      // If user doesn't have the right type, redirect to the appropriate portal
-      const redirectPath = user.type === "patient" ? "/patient" : "/doctor";
-      return <Navigate to={redirectPath} replace />;
-    }
+  // If role is required and user doesn't have it, redirect to home
+  if (requiredRole && user.type !== requiredRole) {
+    console.log(`User type ${user.type} does not match required role ${requiredRole}`);
+    return <Navigate to="/" replace />;
   }
 
-  // If all checks pass, render the children
   return <>{children}</>;
 };
 

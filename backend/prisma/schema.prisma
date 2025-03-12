@@ -25,11 +25,21 @@ model User {
 }
 
 model Doctor {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @unique
-  specialty  String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  specialty    String
+  education    String
+  qualification String
+  description   String   // Doctor's professional description
+  siteUrl      String?  // Optional field
+  phone        String
+  email        String   @unique
+  location     String
+  languages    String   // Stored as comma-separated values
+  photo        Bytes?   // Store image as binary data
+  photoType    String?  // Store the image MIME type (e.g., "image/jpeg")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
   // Relations
   user         User          @relation(fields: [userId], references: [id])
@@ -37,17 +47,20 @@ model Doctor {
 }
 
 model Appointment {
-  id        Int      @id @default(autoincrement())
-  patientId Int
-  doctorId  Int
-  dateTime  DateTime
-  status    String   @default("scheduled") // "scheduled", "completed", "cancelled"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relations
-  patient   User     @relation("PatientAppointments", fields: [patientId], references: [id])
-  doctor    User     @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  id                   Int      @id @default(autoincrement())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  doctorId            Int
+  dateTime            DateTime
+  patientId           Int
+  status              String   @default("scheduled")
+  symptoms            String?
+  consultationAnalysis String?
+  description         String?
+  prescriptionFile    Bytes?   // Store prescription file as binary data
+  prescriptionFileType String? // Store the file MIME type
+  doctor              User     @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  patient             User     @relation("PatientAppointments", fields: [patientId], references: [id])
 }
 
 model Availability {

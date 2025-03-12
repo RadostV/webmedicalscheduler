@@ -13,6 +13,14 @@ CREATE TABLE "Doctor" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "userId" INTEGER NOT NULL,
     "specialty" TEXT NOT NULL,
+    "education" TEXT NOT NULL,
+    "qualification" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "siteUrl" TEXT,
+    "phone" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "location" TEXT NOT NULL,
+    "languages" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "Doctor_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
@@ -48,3 +56,6 @@ CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Doctor_userId_key" ON "Doctor"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Doctor_email_key" ON "Doctor"("email");
