@@ -8,6 +8,15 @@ export interface Appointment {
   status: AppointmentStatus;
   patientName?: string;
   doctorName?: string;
+  consultationAnalysis?: string;
+  description?: string;
+  hasPrescription?: boolean;
+  doctor?: {
+    id: string;
+    userId: string;
+    name: string;
+    specialty: string;
+  };
 }
 
 export interface AppointmentRequest {
@@ -26,6 +35,6 @@ export interface CalendarEvent {
   start: string;
   end: string;
   status: AppointmentStatus;
-  patientId?: string;
-  doctorId?: string;
-} 
+  patientId: string;
+  doctorId: string;
+}

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base URL from environment variable, fallback to localhost for development
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -38,4 +38,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api; 
+export default api;

@@ -1,24 +1,15 @@
-import React, { useState } from "react";
-import { useLocation, Navigate, Link } from "react-router-dom";
-import { Formik, Form, FormikHelpers } from "formik";
-import * as Yup from "yup";
-import {
-  Box,
-  Button,
-  Container,
-  Typography,
-  Paper,
-  Alert,
-  CircularProgress,
-  TextField,
-} from "@mui/material";
-import { useAuth } from "../../contexts/shared/AuthContext";
-import { LoginRequest } from "../../types/shared/auth.types";
+import React, { useState } from 'react';
+import { useLocation, Navigate, Link } from 'react-router-dom';
+import { Formik, Form, FormikHelpers } from 'formik';
+import * as Yup from 'yup';
+import { Box, Button, Container, Typography, Paper, Alert, CircularProgress, TextField } from '@mui/material';
+import { useAuth } from '../../contexts/shared/AuthContext';
+import { LoginRequest } from '../../types/shared/auth.types';
 
 // Validation schema
 const LoginSchema = Yup.object().shape({
-  username: Yup.string().required("Username is required"),
-  password: Yup.string().required("Password is required"),
+  username: Yup.string().required('Username is required'),
+  password: Yup.string().required('Password is required'),
 });
 
 interface LocationState {
@@ -36,22 +27,17 @@ const Login: React.FC = () => {
   if (isAuthenticated && user) {
     const from =
       (location.state as LocationState)?.from?.pathname ||
-      (user.type === "patient" ? "/patient/appointments" : "/doctor/schedule");
+      (user.type === 'patient' ? '/patient/appointments' : '/doctor/schedule');
     return <Navigate to={from} replace />;
   }
 
-  const handleSubmit = async (
-    values: LoginRequest,
-    { setSubmitting }: FormikHelpers<LoginRequest>
-  ) => {
+  const handleSubmit = async (values: LoginRequest, { setSubmitting }: FormikHelpers<LoginRequest>) => {
     try {
       setLoginError(null);
       await login(values);
-
-      // Note: No need to navigate here, the component will redirect via the conditional render above
+      // Login successful - the component will redirect via the conditional render
     } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "Failed to login");
-    } finally {
+      // No need to set login error here as it's handled by the context
       setSubmitting(false);
     }
   };
@@ -61,12 +47,12 @@ const Login: React.FC = () => {
       <Box
         sx={{
           mt: 8,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h5" align="center" gutterBottom>
             Medical Scheduler Login
           </Typography>
@@ -77,19 +63,8 @@ const Login: React.FC = () => {
             </Alert>
           )}
 
-          <Formik
-            initialValues={{ username: "", password: "" }}
-            validationSchema={LoginSchema}
-            onSubmit={handleSubmit}
-          >
-            {({
-              isSubmitting,
-              handleChange,
-              handleBlur,
-              values,
-              errors,
-              touched,
-            }) => (
+          <Formik initialValues={{ username: '', password: '' }} validationSchema={LoginSchema} onSubmit={handleSubmit}>
+            {({ isSubmitting, handleChange, handleBlur, values, errors, touched }) => (
               <Form>
                 <TextField
                   name="username"
@@ -128,20 +103,10 @@ const Login: React.FC = () => {
                   disabled={loading || isSubmitting}
                   sx={{ mt: 3 }}
                 >
-                  {loading || isSubmitting ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    "Login"
-                  )}
+                  {loading || isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Login'}
                 </Button>
 
-                <Button
-                  component={Link}
-                  to="/register"
-                  fullWidth
-                  variant="text"
-                  sx={{ mt: 2 }}
-                >
+                <Button component={Link} to="/register" fullWidth variant="text" sx={{ mt: 2 }}>
                   Don't have an account? Register
                 </Button>
               </Form>

@@ -16,7 +16,7 @@ const DoctorPortal: React.FC = () => {
           <Route
             path="schedule"
             element={
-              <ProtectedRoute allowedUserTypes={['doctor']}>
+              <ProtectedRoute requiredRole="doctor">
                 <Schedule />
               </ProtectedRoute>
             }
@@ -24,7 +24,7 @@ const DoctorPortal: React.FC = () => {
           <Route
             path="availability"
             element={
-              <ProtectedRoute allowedUserTypes={['doctor']}>
+              <ProtectedRoute requiredRole="doctor">
                 <AvailabilityManager />
               </ProtectedRoute>
             }
@@ -32,7 +32,7 @@ const DoctorPortal: React.FC = () => {
           <Route
             path="profile"
             element={
-              <ProtectedRoute allowedUserTypes={['doctor']}>
+              <ProtectedRoute requiredRole="doctor">
                 <ProfileEditor />
               </ProtectedRoute>
             }

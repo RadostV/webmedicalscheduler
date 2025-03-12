@@ -5,6 +5,7 @@ import { validateRequest } from '../middleware/validate.middleware';
 import { authenticateToken } from '../middleware/auth.middleware';
 import multer from 'multer';
 import sharp from 'sharp';
+import jwt from 'jsonwebtoken';
 
 interface AuthUser {
   id: number;
@@ -20,6 +21,10 @@ interface MulterAuthRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
 }
 
+// Create a separate router for public routes
+const publicRouter = Router();
+
+// Create the main router for authenticated routes
 const router = Router();
 
 // Configure multer for memory storage
@@ -39,7 +44,66 @@ const upload = multer({
   },
 });
 
-// Apply authentication middleware to all doctor routes
+// Configure multer for prescription file uploads
+const prescriptionStorage = multer.memoryStorage();
+const uploadPrescription = multer({
+  storage: prescriptionStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept only PDF files
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  },
+});
+
+// Add the photo route to the public router
+publicRouter.get('/profile/photo/:id', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const doctorId = parseInt(req.params.id);
+
+    if (isNaN(doctorId)) {
+      console.error('Invalid doctor ID:', req.params.id);
+      return res.status(400).json({ message: 'Invalid doctor ID' });
+    }
+
+    console.log('Fetching photo for doctor ID:', doctorId);
+
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: {
+        photo: true,
+        photoType: true,
+      },
+    });
+
+    if (!doctor || !doctor.photo || !doctor.photoType) {
+      console.error('Photo not found for doctor ID:', doctorId);
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+
+    console.log('Found photo with type:', doctor.photoType);
+
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Content-Type', doctor.photoType);
+    res.setHeader('Content-Length', doctor.photo.length);
+
+    return res.send(doctor.photo);
+  } catch (error) {
+    console.error('Error retrieving photo:', error);
+    return res.status(500).json({ message: 'Failed to retrieve photo' });
+  }
+});
+
+// Apply authentication middleware to the main router
 router.use(authenticateToken);
 
 interface SetAvailabilityRequest {
@@ -861,54 +925,6 @@ router.post(
 
 /**
  * @swagger
- * /api/doctors/profile/photo/{id}:
- *   get:
- *     summary: Get doctor's profile photo
- *     tags: [Doctors]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Photo retrieved successfully
- *         content:
- *           image/*:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: Doctor or photo not found
- *       500:
- *         description: Server error
- */
-router.get('/profile/photo/:id', async (req: Request, res: Response): Promise<Response> => {
-  try {
-    const doctorId = parseInt(req.params.id);
-    const doctor = await prisma.doctor.findUnique({
-      where: { id: doctorId },
-      select: {
-        photo: true,
-        photoType: true,
-      },
-    });
-
-    if (!doctor || !doctor.photo || !doctor.photoType) {
-      return res.status(404).json({ message: 'Photo not found' });
-    }
-
-    res.setHeader('Content-Type', doctor.photoType);
-    return res.send(doctor.photo);
-  } catch (error) {
-    console.error('Error retrieving photo:', error);
-    return res.status(500).json({ message: 'Failed to retrieve photo' });
-  }
-});
-
-/**
- * @swagger
  * /api/doctors/test-auth:
  *   get:
  *     summary: Test authentication
@@ -949,26 +965,215 @@ router.get('/test-auth', async (req: AuthenticatedRequest, res: Response) => {
  */
 router.get('/profile', async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
+    console.log('Fetching doctor profile for user:', req.user);
+
     const doctorProfile = await prisma.doctor.findUnique({
       where: {
         userId: req.user!.id,
       },
+      include: {
+        user: {
+          select: {
+            username: true,
+          },
+        },
+      },
     });
 
     if (!doctorProfile) {
+      console.log('Doctor profile not found for user:', req.user);
       return res.status(404).json({ error: 'Doctor profile not found' });
     }
 
-    // Add photo URL to the response if photo exists
+    console.log('Found doctor profile:', doctorProfile);
+
+    // Add photo URL and format the response
     const responseProfile = {
-      ...doctorProfile,
+      id: doctorProfile.id.toString(),
+      userId: doctorProfile.userId.toString(),
+      specialty: doctorProfile.specialty,
+      education: doctorProfile.education,
+      qualification: doctorProfile.qualification,
+      description: doctorProfile.description,
+      siteUrl: doctorProfile.siteUrl,
+      phone: doctorProfile.phone,
+      email: doctorProfile.email,
+      location: doctorProfile.location,
+      languages: doctorProfile.languages,
       photoUrl: doctorProfile.photo ? `/api/doctors/profile/photo/${doctorProfile.id}` : null,
+      username: doctorProfile.user.username,
     };
 
     return res.json(responseProfile);
   } catch (error) {
     console.error('Error fetching doctor profile:', error);
     return res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/doctors/appointments/{id}/complete:
+ *   patch:
+ *     summary: Complete an appointment with medical details
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Appointment ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - consultationAnalysis
+ *               - description
+ *             properties:
+ *               consultationAnalysis:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               prescriptionFile:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Appointment completed successfully
+ *       400:
+ *         description: Invalid request
+ *       404:
+ *         description: Appointment not found
+ *       500:
+ *         description: Failed to complete appointment
+ */
+router.patch(
+  '/appointments/:id/complete',
+  uploadPrescription.single('prescriptionFile'),
+  [
+    body('consultationAnalysis').notEmpty().withMessage('Consultation analysis is required'),
+    body('description').notEmpty().withMessage('Description is required'),
+  ],
+  validateRequest,
+  async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const appointmentId = parseInt(req.params.id);
+      const { consultationAnalysis, description } = req.body;
+      const prescriptionFile = req.file?.buffer;
+      const prescriptionFileType = req.file?.mimetype;
+
+      if (isNaN(appointmentId)) {
+        return res.status(400).json({ error: 'Invalid appointment ID' });
+      }
+
+      // Check if appointment exists and belongs to the doctor
+      const appointment = await prisma.appointment.findFirst({
+        where: {
+          id: appointmentId,
+          doctorId: req.user!.id,
+        },
+      });
+
+      if (!appointment) {
+        return res.status(404).json({ error: 'Appointment not found' });
+      }
+
+      // Update appointment with medical details and mark as completed
+      const updatedAppointment = await prisma.appointment.update({
+        where: {
+          id: appointmentId,
+        },
+        data: {
+          status: 'completed',
+          consultationAnalysis,
+          description,
+          prescriptionFile: prescriptionFile ? Buffer.from(prescriptionFile) : undefined,
+          prescriptionFileType: prescriptionFileType || undefined,
+        },
+        include: {
+          patient: {
+            select: {
+              username: true,
+            },
+          },
+        },
+      });
+
+      // Format the response
+      const formattedAppointment = {
+        ...updatedAppointment,
+        patientName: updatedAppointment.patient.username,
+        hasPrescription: !!updatedAppointment.prescriptionFile,
+      };
+
+      return res.status(200).json(formattedAppointment);
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+      return res.status(500).json({ error: 'Failed to complete appointment' });
+    }
+  }
+);
+
+// Add the prescription file route to the public router
+publicRouter.get('/appointments/:id/prescription', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const appointmentId = parseInt(req.params.id);
+    const token = req.query.token as string;
+
+    if (!token) {
+      return res.status(401).json({ message: 'Authentication token is required' });
+    }
+
+    if (isNaN(appointmentId)) {
+      return res.status(400).json({ message: 'Invalid appointment ID' });
+    }
+
+    // Verify the token
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+
+      // Get the appointment
+      const appointment = await prisma.appointment.findFirst({
+        where: {
+          id: appointmentId,
+          OR: [{ patientId: decoded.userId }, { doctorId: decoded.userId }],
+        },
+        select: {
+          prescriptionFile: true,
+          prescriptionFileType: true,
+        },
+      });
+
+      if (!appointment) {
+        console.log('Auth failed or appointment not found:', {
+          userId: decoded.userId,
+          appointmentId,
+        });
+        return res.status(403).json({ message: 'Not authorized to access this prescription' });
+      }
+
+      if (!appointment.prescriptionFile || !appointment.prescriptionFileType) {
+        return res.status(404).json({ message: 'Prescription not found' });
+      }
+
+      // Set headers
+      res.setHeader('Content-Type', appointment.prescriptionFileType);
+      res.setHeader('Content-Disposition', 'inline; filename="prescription.pdf"');
+      res.setHeader('Content-Length', appointment.prescriptionFile.length);
+
+      return res.send(appointment.prescriptionFile);
+    } catch (err) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+  } catch (error) {
+    console.error('Error retrieving prescription:', error);
+    return res.status(500).json({ message: 'Failed to retrieve prescription' });
   }
 });
 
@@ -992,4 +1197,5 @@ function generateTimeSlots(date: Date, startTime: string, endTime: string): stri
   return slots;
 }
 
-export default router;
+// Export both routers
+export { publicRouter, router as default };

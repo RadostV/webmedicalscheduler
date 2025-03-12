@@ -126,6 +126,9 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
       doctorId: appointment.doctorId.toString(),
       dateTime: appointment.dateTime.toISOString(),
       status: appointment.status,
+      consultationAnalysis: appointment.consultationAnalysis || '',
+      description: appointment.description || '',
+      hasPrescription: !!appointment.prescriptionFile,
       doctor: {
         id: appointment.doctor.doctorProfile?.id.toString() || '',
         userId: appointment.doctor.id.toString(),

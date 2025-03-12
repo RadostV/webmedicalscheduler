@@ -23,7 +23,7 @@ import ErrorMessage from '../../components/shared/ErrorMessage';
 import SuccessMessage from '../../components/shared/SuccessMessage';
 import Modal from '../../components/shared/Modal';
 import { Doctor } from '../../types/doctor';
-import { TimeSlot } from '../../types/appointment';
+import { TimeSlot } from '../../services/patient/patient.service';
 import { patientService } from '../../services/patient/patient.service';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { Availability } from '../../types/doctor';

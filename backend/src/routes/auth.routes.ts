@@ -157,24 +157,22 @@ const registerValidation = [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
   body('type').isIn(['patient', 'doctor']).withMessage('Invalid user type'),
-  body('specialty').if(body('type').equals('doctor')).notEmpty().withMessage('Specialty is required for doctors'),
-  body('education').if(body('type').equals('doctor')).notEmpty().withMessage('Education is required for doctors'),
+  body('specialty').if(body('type').equals('doctor')).optional().isString().withMessage('Specialty must be a string'),
+  body('education').if(body('type').equals('doctor')).optional().isString().withMessage('Education must be a string'),
   body('qualification')
     .if(body('type').equals('doctor'))
-    .notEmpty()
-    .withMessage('Qualification is required for doctors'),
+    .optional()
+    .isString()
+    .withMessage('Qualification must be a string'),
   body('description')
     .if(body('type').equals('doctor'))
-    .notEmpty()
-    .withMessage('Professional description is required for doctors'),
-  body('phone').if(body('type').equals('doctor')).notEmpty().withMessage('Phone is required for doctors'),
-  body('email')
-    .if(body('type').equals('doctor'))
-    .notEmpty()
-    .isEmail()
-    .withMessage('Valid email is required for doctors'),
-  body('location').if(body('type').equals('doctor')).notEmpty().withMessage('Location is required for doctors'),
-  body('languages').if(body('type').equals('doctor')).notEmpty().withMessage('Languages are required for doctors'),
+    .optional()
+    .isString()
+    .withMessage('Description must be a string'),
+  body('phone').if(body('type').equals('doctor')).optional().isString().withMessage('Phone must be a string'),
+  body('email').if(body('type').equals('doctor')).optional().isEmail().withMessage('Email must be valid'),
+  body('location').if(body('type').equals('doctor')).optional().isString().withMessage('Location must be a string'),
+  body('languages').if(body('type').equals('doctor')).optional().isString().withMessage('Languages must be a string'),
 ];
 
 /**
@@ -272,15 +270,15 @@ router.post(
         await prisma.doctor.create({
           data: {
             userId: user.id,
-            specialty: specialty!,
-            education: education!,
-            qualification: qualification!,
-            description: description!,
-            siteUrl,
-            phone: phone!,
-            email: email!,
-            location: location!,
-            languages: languages!,
+            specialty: specialty || '',
+            education: education || '',
+            qualification: qualification || '',
+            description: description || '',
+            siteUrl: siteUrl || '',
+            phone: phone || '',
+            email: email || '',
+            location: location || '',
+            languages: languages || '',
           },
         });
       }

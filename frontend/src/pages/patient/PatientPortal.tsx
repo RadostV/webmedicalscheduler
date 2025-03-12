@@ -1,10 +1,10 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { Container } from "@mui/material";
-import Navbar from "../../components/shared/Navbar";
-import AppointmentList from "./AppointmentList";
-import AppointmentScheduler from "./AppointmentScheduler";
-import ProtectedRoute from "../../components/shared/ProtectedRoute";
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Container } from '@mui/material';
+import Navbar from '../../components/shared/Navbar';
+import AppointmentList from './AppointmentList';
+import AppointmentScheduler from './AppointmentScheduler';
+import ProtectedRoute from '../../components/shared/ProtectedRoute';
 
 const PatientPortal: React.FC = () => {
   return (
@@ -15,7 +15,7 @@ const PatientPortal: React.FC = () => {
           <Route
             path="appointments"
             element={
-              <ProtectedRoute allowedUserTypes={["patient"]}>
+              <ProtectedRoute requiredRole="patient">
                 <AppointmentList />
               </ProtectedRoute>
             }
@@ -23,7 +23,7 @@ const PatientPortal: React.FC = () => {
           <Route
             path="schedule"
             element={
-              <ProtectedRoute allowedUserTypes={["patient"]}>
+              <ProtectedRoute requiredRole="patient">
                 <AppointmentScheduler />
               </ProtectedRoute>
             }

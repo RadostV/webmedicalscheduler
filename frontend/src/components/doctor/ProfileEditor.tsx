@@ -1,28 +1,75 @@
-import React, { useState, useRef } from 'react';
-import { Box, TextField, Button, Typography, Paper, Alert, Grid, Avatar, IconButton } from '@mui/material';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Alert,
+  Grid,
+  Avatar,
+  IconButton,
+  CircularProgress,
+} from '@mui/material';
 import { useAuth } from '../../contexts/shared/AuthContext';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { DoctorProfile } from '../../types/shared/auth.types';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import { API_BASE_URL } from '../../config/api.config';
 
 const ProfileEditor: React.FC = () => {
   const { user, updateUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<DoctorProfile>>({
-    specialty: user?.doctorProfile?.specialty || '',
-    education: user?.doctorProfile?.education || '',
-    qualification: user?.doctorProfile?.qualification || '',
-    description: user?.doctorProfile?.description || '',
-    siteUrl: user?.doctorProfile?.siteUrl || '',
-    phone: user?.doctorProfile?.phone || '',
-    email: user?.doctorProfile?.email || '',
-    location: user?.doctorProfile?.location || '',
-    languages: user?.doctorProfile?.languages || '',
+    specialty: '',
+    education: '',
+    qualification: '',
+    description: '',
+    siteUrl: '',
+    phone: '',
+    email: '',
+    location: '',
+    languages: '',
   });
+
+  // Load profile data once on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setIsLoading(true);
+        const fetchedProfile = await doctorService.getProfile();
+        setProfile(fetchedProfile);
+        setFormData({
+          specialty: fetchedProfile.specialty || '',
+          education: fetchedProfile.education || '',
+          qualification: fetchedProfile.qualification || '',
+          description: fetchedProfile.description || '',
+          siteUrl: fetchedProfile.siteUrl || '',
+          phone: fetchedProfile.phone || '',
+          email: fetchedProfile.email || '',
+          location: fetchedProfile.location || '',
+          languages: fetchedProfile.languages || '',
+        });
+      } catch (err: any) {
+        console.error('Error loading profile:', err);
+        if (err.response?.status === 401 || err.response?.data?.error === 'No token provided') {
+          setError('You have been logged out. Please log in again.');
+        } else {
+          setError(err.response?.data?.error || 'Failed to load profile');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []); // Empty dependency array - only run once on mount
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -41,14 +88,31 @@ const ProfileEditor: React.FC = () => {
       try {
         setIsSubmitting(true);
         setError(null);
-        const updatedProfile = await doctorService.uploadPhoto(e.target.files[0]);
+
+        const file = e.target.files[0];
+
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+          setError('File size must be less than 2MB');
+          return;
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          setError('Only image files are allowed');
+          return;
+        }
+
+        const updatedProfile = await doctorService.uploadPhoto(file);
+        setProfile(updatedProfile);
         updateUser({
           ...user!,
           doctorProfile: updatedProfile,
         });
         setSuccess('Photo updated successfully');
       } catch (err: any) {
-        setError(err.response?.data?.error || 'Failed to upload photo');
+        console.error('Error in handlePhotoChange:', err);
+        setError(err.response?.data?.message || err.response?.data?.error || 'Failed to upload photo');
       } finally {
         setIsSubmitting(false);
       }
@@ -63,6 +127,7 @@ const ProfileEditor: React.FC = () => {
 
     try {
       const updatedProfile = await doctorService.updateProfile(formData);
+      setProfile(updatedProfile);
       updateUser({
         ...user!,
         doctorProfile: updatedProfile,
@@ -75,33 +140,56 @@ const ProfileEditor: React.FC = () => {
     }
   };
 
-  if (!user?.doctorProfile) {
-    return <Typography>Loading...</Typography>;
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
     <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto', mt: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <Avatar
-          src={user.doctorProfile.photoUrl ? `/api${user.doctorProfile.photoUrl}` : undefined}
-          alt={user.username}
-          sx={{
-            width: 100,
-            height: 100,
-            mr: 2,
-            bgcolor: 'primary.main',
-          }}
-          key={user.doctorProfile.photoUrl || 'no-photo'}
-          imgProps={{
-            onError: (e) => {
-              console.error('Error loading image:', e);
-              const imgElement = e.target as HTMLImageElement;
-              imgElement.src = ''; // Clear the src to show the fallback
-            },
-          }}
-        >
-          {!user.doctorProfile.photoUrl && user.username.charAt(0).toUpperCase()}
-        </Avatar>
+        {profile?.photoUrl && (
+          <Box sx={{ position: 'relative' }}>
+            <Avatar
+              src={profile?.photoUrl ? `${API_BASE_URL}${profile.photoUrl}` : ''}
+              alt={user?.username || ''}
+              sx={{
+                width: 100,
+                height: 100,
+                mr: 2,
+                bgcolor: 'primary.main',
+              }}
+              key={profile?.photoUrl}
+              imgProps={{
+                onError: (e) => {
+                  console.error(
+                    'Error loading image. URL:',
+                    profile?.photoUrl ? `${API_BASE_URL}${profile.photoUrl}` : ''
+                  );
+                  const imgElement = e.target as HTMLImageElement;
+                  imgElement.src = ''; // Clear the src to show the fallback
+                },
+              }}
+            >
+              {user?.username?.charAt(0).toUpperCase()}
+            </Avatar>
+          </Box>
+        )}
+        {!profile?.photoUrl && (
+          <Avatar
+            sx={{
+              width: 100,
+              height: 100,
+              mr: 2,
+              bgcolor: 'primary.main',
+            }}
+          >
+            {user?.username?.charAt(0).toUpperCase()}
+          </Avatar>
+        )}
         <Box>
           <input
             type="file"
@@ -111,7 +199,7 @@ const ProfileEditor: React.FC = () => {
             onChange={handlePhotoChange}
           />
           <Button variant="contained" startIcon={<PhotoCamera />} onClick={handlePhotoClick} disabled={isSubmitting}>
-            {user.doctorProfile.photoUrl ? 'Change Photo' : 'Upload Photo'}
+            {profile?.photoUrl ? 'Change Photo' : 'Upload Photo'}
           </Button>
         </Box>
       </Box>

@@ -50,7 +50,7 @@ const convertUser = (apiUser: ApiResponse['user']): User => ({
 
 export const authService = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await api.post<ApiResponse>('/auth/login', credentials);
+    const response = await api.post<ApiResponse>('/api/auth/login', credentials);
     return {
       token: response.data.token,
       user: convertUser(response.data.user),
@@ -58,7 +58,7 @@ export const authService = {
   },
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await api.post<ApiResponse>('/auth/register', data);
+    const response = await api.post<ApiResponse>('/api/auth/register', data);
     return {
       token: response.data.token,
       user: convertUser(response.data.user),

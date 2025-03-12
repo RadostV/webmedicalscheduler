@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post<{
         token: string;
         user: User;
-      }>('/auth/login', credentials);
+      }>('/api/auth/login', credentials);
 
       // Store token and user in local storage
       localStorage.setItem('token', response.data.token);
@@ -112,7 +112,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         type: 'LOGIN_FAILURE',
         payload: errorMessage,
       });
-      throw new Error(errorMessage);
+      // Don't throw the error, just return to prevent page reload
+      return;
     }
   };
 
