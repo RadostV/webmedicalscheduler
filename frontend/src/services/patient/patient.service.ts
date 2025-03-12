@@ -8,8 +8,12 @@ export const patientService = {
     return response.data;
   },
 
-  async scheduleAppointment(appointmentData: AppointmentRequest): Promise<Appointment> {
-    const response = await api.post<Appointment>('/patients/appointments', appointmentData);
+  async scheduleAppointment(formData: FormData): Promise<Appointment> {
+    const response = await api.post<Appointment>('/patients/appointments', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
@@ -20,8 +24,8 @@ export const patientService = {
 
   async getDoctorSlots(doctorId: string, date: string): Promise<string[]> {
     const response = await api.get<string[]>(`/doctors/${doctorId}/slots`, {
-      params: { date }
+      params: { date },
     });
     return response.data;
-  }
-}; 
+  },
+};

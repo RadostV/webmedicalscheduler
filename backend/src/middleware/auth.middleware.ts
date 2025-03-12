@@ -31,27 +31,32 @@ export const authenticateToken = async (
   next: NextFunction
 ): Promise<void | Response> => {
   try {
+    console.log('Auth Middleware - Headers:', req.headers);
     const authHeader = req.headers['authorization'];
+    console.log('Auth Middleware - Authorization Header:', authHeader);
+
     const token = authHeader?.split(' ')[1]; // Bearer TOKEN
+    console.log('Auth Middleware - Extracted Token:', token ? token.substring(0, 20) + '...' : 'No token');
 
     if (!token) {
-      console.log('No token provided');
+      console.log('Auth Middleware - No token provided');
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    console.log('Verifying token:', token.substring(0, 20) + '...');
+    console.log('Auth Middleware - Verifying token:', token.substring(0, 20) + '...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
-    console.log('Decoded token:', decoded);
+    console.log('Auth Middleware - Decoded token:', decoded);
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
     });
 
     if (!user) {
-      console.log('User not found for id:', decoded.userId);
+      console.log('Auth Middleware - User not found for id:', decoded.userId);
       return res.status(401).json({ error: 'User not found' });
     }
 
+    console.log('Auth Middleware - User found:', { id: user.id, type: user.type });
     req.user = {
       id: user.id,
       type: user.type,
@@ -59,7 +64,7 @@ export const authenticateToken = async (
 
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Auth Middleware - Error:', error);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

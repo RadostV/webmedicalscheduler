@@ -12,6 +12,7 @@ import {
   SelectChangeEvent,
   Grid,
   FormHelperText,
+  TextField,
 } from '@mui/material';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -35,6 +36,10 @@ const AppointmentScheduler: React.FC = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
+  const [symptoms, setSymptoms] = useState<string>('');
+  const [consultationAnalysis, setConsultationAnalysis] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -232,14 +237,38 @@ const AppointmentScheduler: React.FC = () => {
 
     setLoading(true);
     try {
+      // Create a new date object with the selected date
       const dateTime = new Date(selectedDate);
       const [hours, minutes] = selectedTime.split(':');
+
+      // Set the time components
       dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-      await patientService.scheduleAppointment({
+      // Create form data for file upload
+      const formData = new FormData();
+      formData.append('doctorId', selectedDoctor);
+      formData.append('dateTime', dateTime.toISOString());
+      formData.append('symptoms', symptoms);
+      formData.append('consultationAnalysis', consultationAnalysis);
+      formData.append('description', description);
+      if (prescriptionFile) {
+        formData.append('prescriptionFile', prescriptionFile);
+      }
+
+      console.log('Scheduling appointment:', {
         doctorId: selectedDoctor,
         dateTime: dateTime.toISOString(),
+        localTime: dateTime.toString(),
+        selectedTime,
+        symptoms,
+        consultationAnalysis,
+        description,
+        prescriptionFile: prescriptionFile?.name,
       });
+
+      const response = await patientService.scheduleAppointment(formData);
+
+      console.log('Appointment scheduled:', response);
 
       // Show success message
       setSuccessMessage('Appointment scheduled successfully');
@@ -249,9 +278,10 @@ const AppointmentScheduler: React.FC = () => {
       setTimeout(() => {
         navigate('/patient/appointments');
       }, 2000);
-    } catch (err) {
-      setError('Failed to schedule appointment. Please try again later.');
-      console.error(err);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to schedule appointment. Please try again later.';
+      setError(errorMessage);
+      console.error('Error scheduling appointment:', err);
       setModalOpen(false);
     } finally {
       setLoading(false);
@@ -284,16 +314,21 @@ const AppointmentScheduler: React.FC = () => {
 
       <Paper sx={{ p: 3, mt: 3 }}>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Select Doctor
+            </Typography>
             <FormControl fullWidth error={formErrors.doctor}>
-              <InputLabel id="doctor-select-label">Select Doctor</InputLabel>
               <Select
                 labelId="doctor-select-label"
                 id="doctor-select"
                 value={selectedDoctor}
-                label="Select Doctor"
                 onChange={handleDoctorChange}
+                displayEmpty
               >
+                <MenuItem value="" disabled>
+                  Select a doctor
+                </MenuItem>
                 {doctors.map((doctor) => (
                   <MenuItem key={doctor.id} value={doctor.userId}>
                     {doctor.name} - {doctor.specialty}
@@ -304,50 +339,53 @@ const AppointmentScheduler: React.FC = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Select Date
-              </Typography>
-              <Box
-                sx={{
-                  '.react-datepicker-wrapper': {
-                    width: '100%',
-                  },
-                  '.react-datepicker__input-container input': {
-                    width: '100%',
-                    padding: '16.5px 14px',
-                    borderRadius: '4px',
-                    border: formErrors.date ? '1px solid #d32f2f' : '1px solid rgba(0, 0, 0, 0.23)',
-                    fontSize: '1rem',
-                  },
-                }}
-              >
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={handleDateChange}
-                  minDate={new Date()}
-                  maxDate={addDays(new Date(), 30)}
-                  placeholderText="Select a date"
-                  filterDate={filterDate}
-                  dateFormat="MMMM d, yyyy"
-                  onMonthChange={handleMonthChange}
-                />
-              </Box>
-              {formErrors.date && <FormHelperText error>Please select a date</FormHelperText>}
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Select Date
+            </Typography>
+            <Box
+              sx={{
+                '.react-datepicker-wrapper': {
+                  width: '100%',
+                },
+                '.react-datepicker__input-container input': {
+                  width: '100%',
+                  padding: '16.5px 14px',
+                  borderRadius: '4px',
+                  border: formErrors.date ? '1px solid #d32f2f' : '1px solid rgba(0, 0, 0, 0.23)',
+                  fontSize: '1rem',
+                },
+              }}
+            >
+              <DatePicker
+                selected={selectedDate}
+                onChange={handleDateChange}
+                minDate={new Date()}
+                maxDate={addDays(new Date(), 30)}
+                placeholderText="Select a date"
+                filterDate={filterDate}
+                dateFormat="MMMM d, yyyy"
+                onMonthChange={handleMonthChange}
+              />
             </Box>
+            {formErrors.date && <FormHelperText error>Please select a date</FormHelperText>}
           </Grid>
 
           <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Select Time
+            </Typography>
             <FormControl fullWidth disabled={!selectedDoctor || !selectedDate} error={formErrors.time}>
-              <InputLabel id="time-slot-label">Select Time</InputLabel>
               <Select
                 labelId="time-slot-label"
                 id="time-slot"
                 value={selectedTime}
-                label="Select Time"
                 onChange={handleTimeChange}
+                displayEmpty
               >
+                <MenuItem value="" disabled>
+                  Select a time
+                </MenuItem>
                 {timeSlots
                   .filter((slot) => slot.available)
                   .map((slot) => (
@@ -358,6 +396,76 @@ const AppointmentScheduler: React.FC = () => {
               </Select>
               {formErrors.time && <FormHelperText>Please select a time</FormHelperText>}
             </FormControl>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Symptoms
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={symptoms}
+              onChange={(e) => setSymptoms(e.target.value)}
+              placeholder="Describe your symptoms"
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Consultation Analysis
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={consultationAnalysis}
+              onChange={(e) => setConsultationAnalysis(e.target.value)}
+              placeholder="Enter consultation analysis"
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Description
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Additional description or notes"
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>
+              Prescription (PDF)
+            </Typography>
+            <input
+              accept="application/pdf"
+              style={{ display: 'none' }}
+              id="prescription-file"
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && file.type === 'application/pdf') {
+                  setPrescriptionFile(file);
+                }
+              }}
+            />
+            <label htmlFor="prescription-file">
+              <Button variant="outlined" component="span">
+                Upload Prescription
+              </Button>
+            </label>
+            {prescriptionFile && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Selected file: {prescriptionFile.name}
+              </Typography>
+            )}
           </Grid>
 
           <Grid item xs={12}>

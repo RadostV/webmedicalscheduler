@@ -5,8 +5,17 @@ export interface Appointment {
   patientId: string;
   doctorId: string;
   dateTime: string; // ISO 8601 format
-  status: 'scheduled' | 'completed' | 'cancelled';
-  doctor?: Doctor;
+  status: string;
+  symptoms?: string;
+  consultationAnalysis?: string;
+  description?: string;
+  prescriptionFile?: string;
+  doctor: {
+    id: string;
+    userId: string;
+    name: string;
+    specialty: string;
+  };
   patient?: {
     id: string;
     username: string;
@@ -16,9 +25,13 @@ export interface Appointment {
 export interface AppointmentRequest {
   doctorId: string;
   dateTime: string; // ISO 8601 format
+  symptoms?: string;
+  consultationAnalysis?: string;
+  description?: string;
+  prescriptionFile?: string;
 }
 
 export interface TimeSlot {
   time: string; // Format: "HH:mm"
   available: boolean;
-} 
+}

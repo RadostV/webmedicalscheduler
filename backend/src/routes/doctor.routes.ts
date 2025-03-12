@@ -4,24 +4,43 @@ import { prisma } from '../index';
 import { validateRequest } from '../middleware/validate.middleware';
 import { authenticateToken } from '../middleware/auth.middleware';
 import multer from 'multer';
-import { storage } from '../config/cloudinary.config';
+import sharp from 'sharp';
 
-const router = Router();
-const upload = multer({ storage });
-
-// Apply authentication middleware to all doctor routes
-router.use(authenticateToken);
+interface AuthUser {
+  id: number;
+  type: string;
+  doctorId?: number;
+}
 
 interface AuthenticatedRequest extends Request {
-  user?: {
-    id: number;
-    type: string;
-  };
+  user?: AuthUser;
 }
 
 interface MulterAuthRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
 }
+
+const router = Router();
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
+
+// Apply authentication middleware to all doctor routes
+router.use(authenticateToken);
 
 interface SetAvailabilityRequest {
   dayOfWeek: number;
@@ -38,7 +57,9 @@ interface AppointmentWithDateTime {
 
 // Set availability validation
 const setAvailabilityValidation = [
-  body('dayOfWeek').isInt({ min: 0, max: 6 }).withMessage('Day of week must be between 0 and 6'),
+  body('dayOfWeek')
+    .isInt({ min: 0, max: 6 })
+    .withMessage('Day of week must be between 0 and 6 (Monday = 0, Sunday = 6)'),
   body('startTime')
     .matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
     .withMessage('Start time must be in HH:mm format'),
@@ -62,7 +83,7 @@ const setAvailabilityValidation = [
  *           type: integer
  *           minimum: 0
  *           maximum: 6
- *           description: Day of week (0 = Sunday, 6 = Saturday)
+ *           description: Day of week (0 = Monday, 6 = Sunday)
  *         startTime:
  *           type: string
  *           pattern: '^([01]\d|2[0-3]):([0-5]\d)$'
@@ -430,7 +451,8 @@ router.get('/slots', async (req: Request, res: Response): Promise<Response> => {
     }
 
     const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
+    // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
+    const dayOfWeek = (date.getDay() + 6) % 7;
 
     const doctorProfile = await prisma.doctor.findUnique({
       where: {
@@ -518,7 +540,8 @@ router.get('/:id/slots', async (req: Request, res: Response): Promise<Response> 
     }
 
     const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
+    // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
+    const dayOfWeek = (date.getDay() + 6) % 7;
 
     const doctorProfile = await prisma.doctor.findFirst({
       where: {
@@ -741,7 +764,13 @@ router.patch('/profile', async (req: AuthenticatedRequest, res: Response): Promi
       },
     });
 
-    return res.json(updatedProfile);
+    // Add photo URL to the response
+    const responseProfile = {
+      ...updatedProfile,
+      photoUrl: updatedProfile.photo ? `/api/doctors/profile/photo/${updatedProfile.id}` : null,
+    };
+
+    return res.json(responseProfile);
   } catch (error) {
     console.error('Error updating doctor profile:', error);
     return res.status(500).json({ error: 'Failed to update profile' });
@@ -752,7 +781,7 @@ router.patch('/profile', async (req: AuthenticatedRequest, res: Response): Promi
  * @swagger
  * /api/doctors/profile/photo:
  *   post:
- *     summary: Upload doctor's profile photo
+ *     summary: Upload a profile photo
  *     tags: [Doctors]
  *     security:
  *       - bearerAuth: []
@@ -769,10 +798,12 @@ router.patch('/profile', async (req: AuthenticatedRequest, res: Response): Promi
  *     responses:
  *       200:
  *         description: Photo uploaded successfully
- *       404:
- *         description: Doctor profile not found
+ *       400:
+ *         description: No file uploaded or invalid file type
+ *       401:
+ *         description: Unauthorized
  *       500:
- *         description: Failed to upload photo
+ *         description: Server error
  */
 router.post(
   '/profile/photo',
@@ -780,35 +811,101 @@ router.post(
   async (req: MulterAuthRequest, res: Response): Promise<Response> => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No photo uploaded' });
+        return res.status(400).json({ message: 'No file uploaded' });
       }
 
+      // Find the doctor profile using the user ID from the token
       const doctorProfile = await prisma.doctor.findUnique({
-        where: {
-          userId: req.user!.id,
-        },
+        where: { userId: req.user!.id },
       });
 
       if (!doctorProfile) {
-        return res.status(404).json({ error: 'Doctor profile not found' });
+        return res.status(401).json({ message: 'Doctor profile not found' });
       }
 
-      const updatedProfile = await prisma.doctor.update({
-        where: {
-          userId: req.user!.id,
-        },
+      // Compress and resize the image
+      const processedImage = await sharp(req.file.buffer)
+        .resize(300, 300, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+
+      const updatedDoctor = await prisma.doctor.update({
+        where: { id: doctorProfile.id },
         data: {
-          photoUrl: req.file.path,
+          photo: processedImage,
+          photoType: 'image/jpeg', // We're converting all images to JPEG
+        },
+        select: {
+          id: true,
+          photoType: true,
         },
       });
 
-      return res.json(updatedProfile);
+      return res.json({
+        message: 'Photo uploaded successfully',
+        doctor: {
+          id: updatedDoctor.id,
+          photoUrl: `/api/doctors/profile/photo/${updatedDoctor.id}`,
+          photoType: updatedDoctor.photoType,
+        },
+      });
     } catch (error) {
       console.error('Error uploading photo:', error);
-      return res.status(500).json({ error: 'Failed to upload photo' });
+      return res.status(500).json({ message: 'Failed to upload photo' });
     }
   }
 );
+
+/**
+ * @swagger
+ * /api/doctors/profile/photo/{id}:
+ *   get:
+ *     summary: Get doctor's profile photo
+ *     tags: [Doctors]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Photo retrieved successfully
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Doctor or photo not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/profile/photo/:id', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const doctorId = parseInt(req.params.id);
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: {
+        photo: true,
+        photoType: true,
+      },
+    });
+
+    if (!doctor || !doctor.photo || !doctor.photoType) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+
+    res.setHeader('Content-Type', doctor.photoType);
+    return res.send(doctor.photo);
+  } catch (error) {
+    console.error('Error retrieving photo:', error);
+    return res.status(500).json({ message: 'Failed to retrieve photo' });
+  }
+});
 
 /**
  * @swagger
@@ -832,6 +929,47 @@ router.get('/test-auth', async (req: AuthenticatedRequest, res: Response) => {
       type: req.user?.type,
     },
   });
+});
+
+/**
+ * @swagger
+ * /api/doctors/profile:
+ *   get:
+ *     summary: Get doctor's profile
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Doctor profile retrieved successfully
+ *       404:
+ *         description: Doctor profile not found
+ *       500:
+ *         description: Failed to fetch profile
+ */
+router.get('/profile', async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const doctorProfile = await prisma.doctor.findUnique({
+      where: {
+        userId: req.user!.id,
+      },
+    });
+
+    if (!doctorProfile) {
+      return res.status(404).json({ error: 'Doctor profile not found' });
+    }
+
+    // Add photo URL to the response if photo exists
+    const responseProfile = {
+      ...doctorProfile,
+      photoUrl: doctorProfile.photo ? `/api/doctors/profile/photo/${doctorProfile.id}` : null,
+    };
+
+    return res.json(responseProfile);
+  } catch (error) {
+    console.error('Error fetching doctor profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch profile' });
+  }
 });
 
 // Helper function to generate time slots

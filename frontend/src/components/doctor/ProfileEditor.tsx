@@ -82,7 +82,26 @@ const ProfileEditor: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto', mt: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <Avatar src={user.doctorProfile.photoUrl} alt={user.username} sx={{ width: 100, height: 100, mr: 2 }} />
+        <Avatar
+          src={user.doctorProfile.photoUrl ? `/api${user.doctorProfile.photoUrl}` : undefined}
+          alt={user.username}
+          sx={{
+            width: 100,
+            height: 100,
+            mr: 2,
+            bgcolor: 'primary.main',
+          }}
+          key={user.doctorProfile.photoUrl || 'no-photo'}
+          imgProps={{
+            onError: (e) => {
+              console.error('Error loading image:', e);
+              const imgElement = e.target as HTMLImageElement;
+              imgElement.src = ''; // Clear the src to show the fallback
+            },
+          }}
+        >
+          {!user.doctorProfile.photoUrl && user.username.charAt(0).toUpperCase()}
+        </Avatar>
         <Box>
           <input
             type="file"
@@ -92,7 +111,7 @@ const ProfileEditor: React.FC = () => {
             onChange={handlePhotoChange}
           />
           <Button variant="contained" startIcon={<PhotoCamera />} onClick={handlePhotoClick} disabled={isSubmitting}>
-            Upload Photo
+            {user.doctorProfile.photoUrl ? 'Change Photo' : 'Upload Photo'}
           </Button>
         </Box>
       </Box>

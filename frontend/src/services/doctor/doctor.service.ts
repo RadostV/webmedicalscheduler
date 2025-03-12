@@ -58,11 +58,29 @@ export const doctorService = {
     const formData = new FormData();
     formData.append('photo', photo);
 
-    const response = await api.post<DoctorProfile>('/doctors/profile/photo', formData, {
+    const response = await api.post('/doctors/profile/photo', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
+
+    // Get the current doctor profile to ensure we have all the fields
+    const currentProfile = await this.getProfile();
+
+    // Return the updated doctor profile with the new photo URL
+    return {
+      ...currentProfile,
+      photoUrl: response.data.doctor.photoUrl,
+    };
+  },
+
+  async getProfile(): Promise<DoctorProfile> {
+    try {
+      const response = await api.get('/doctors/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching doctor profile:', error);
+      throw error;
+    }
   },
 };

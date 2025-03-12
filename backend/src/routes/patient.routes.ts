@@ -2,12 +2,39 @@ import { Router, Request, Response } from 'express';
 import { body } from 'express-validator';
 import { prisma } from '../index';
 import { validateRequest } from '../middleware/validate.middleware';
+import { authenticateToken } from '../middleware/auth.middleware';
+import multer from 'multer';
 
 const router = Router();
+
+// Apply authentication middleware to all patient routes
+router.use(authenticateToken);
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accept only PDF files
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  },
+});
 
 interface CreateAppointmentRequest {
   doctorId: string; // This is the user ID of the doctor
   dateTime: string;
+  symptoms?: string;
+  consultationAnalysis?: string;
+  description?: string;
+  prescriptionFile?: Buffer; // Binary data of the PDF file
+  prescriptionFileType?: string; // MIME type of the file
 }
 
 /**
@@ -81,10 +108,10 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
             doctorProfile: {
               select: {
                 id: true,
-                specialty: true
-              }
-            }
-          }
+                specialty: true,
+              },
+            },
+          },
         },
       },
       orderBy: {
@@ -93,7 +120,7 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
     });
 
     // Transform the response to match the frontend types
-    const formattedAppointments = appointments.map(appointment => ({
+    const formattedAppointments = appointments.map((appointment) => ({
       id: appointment.id.toString(),
       patientId: appointment.patientId.toString(),
       doctorId: appointment.doctorId.toString(),
@@ -103,8 +130,8 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
         id: appointment.doctor.doctorProfile?.id.toString() || '',
         userId: appointment.doctor.id.toString(),
         name: appointment.doctor.username,
-        specialty: appointment.doctor.doctorProfile?.specialty || ''
-      }
+        specialty: appointment.doctor.doctorProfile?.specialty || '',
+      },
     }));
 
     return res.json(formattedAppointments);
@@ -117,6 +144,9 @@ router.get('/appointments', async (req: Request, res: Response): Promise<Respons
 const createAppointmentValidation = [
   body('doctorId').isString().withMessage('Doctor ID must be a string'),
   body('dateTime').isISO8601().withMessage('Invalid date format'),
+  body('symptoms').optional().isString().withMessage('Symptoms must be a string'),
+  body('consultationAnalysis').optional().isString().withMessage('Consultation analysis must be a string'),
+  body('description').optional().isString().withMessage('Description must be a string'),
 ];
 
 /**
@@ -158,12 +188,27 @@ const createAppointmentValidation = [
  */
 router.post(
   '/appointments',
+  upload.single('prescriptionFile'),
   createAppointmentValidation,
   validateRequest,
   async (req: Request<{}, {}, CreateAppointmentRequest>, res: Response): Promise<Response> => {
     try {
-      const { doctorId, dateTime } = req.body;
+      const { doctorId, dateTime, symptoms, consultationAnalysis, description } = req.body;
+      const prescriptionFile = req.file?.buffer; // Binary data
+      const prescriptionFileType = req.file?.mimetype; // MIME type
       const appointmentDate = new Date(dateTime);
+
+      console.log('Creating appointment:', {
+        doctorId,
+        dateTime,
+        appointmentDate: appointmentDate.toISOString(),
+        appointmentLocalTime: appointmentDate.toString(),
+        symptoms,
+        consultationAnalysis,
+        description,
+        prescriptionFile,
+        prescriptionFileType,
+      });
 
       // Check if doctor exists by user ID
       const doctor = await prisma.doctor.findFirst({
@@ -176,12 +221,21 @@ router.post(
       });
 
       if (!doctor) {
+        console.log('Doctor not found:', doctorId);
         return res.status(404).json({ error: 'Doctor not found' });
       }
 
-      // Check doctor's availability for the given day
-      const dayOfWeek = appointmentDate.getDay();
+      // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
+      const dayOfWeek = (appointmentDate.getDay() + 6) % 7;
       const timeString = appointmentDate.toTimeString().slice(0, 5); // HH:mm format
+
+      console.log('Checking availability for:', {
+        doctorId: doctor.id,
+        dayOfWeek,
+        timeString,
+        appointmentDate: appointmentDate.toISOString(),
+        appointmentLocalTime: appointmentDate.toString(),
+      });
 
       const availability = await prisma.availability.findFirst({
         where: {
@@ -197,8 +251,15 @@ router.post(
       });
 
       if (!availability) {
+        console.log('No availability found for:', {
+          doctorId: doctor.id,
+          dayOfWeek,
+          timeString,
+        });
         return res.status(400).json({ error: 'Doctor is not available at this time' });
       }
+
+      console.log('Found availability:', availability);
 
       // Check for existing appointments at the same time
       const existingAppointment = await prisma.appointment.findFirst({
@@ -209,15 +270,25 @@ router.post(
       });
 
       if (existingAppointment) {
+        console.log('Time slot already booked:', {
+          existingAppointment,
+          requestedTime: appointmentDate.toISOString(),
+        });
         return res.status(400).json({ error: 'Time slot is already booked' });
       }
 
-      // Create appointment
+      // Create appointment with new fields
       const appointment = await prisma.appointment.create({
         data: {
           patientId: req.user!.id,
           doctorId: doctor.userId,
           dateTime: appointmentDate,
+          status: 'scheduled',
+          symptoms,
+          consultationAnalysis,
+          description,
+          prescriptionFile: prescriptionFile ? Buffer.from(prescriptionFile) : null,
+          prescriptionFileType: prescriptionFileType || null,
         },
         include: {
           doctor: {
@@ -228,7 +299,28 @@ router.post(
         },
       });
 
-      return res.status(201).json(appointment);
+      console.log('Created appointment:', appointment);
+
+      // Format the response with new fields
+      const formattedAppointment = {
+        id: appointment.id.toString(),
+        patientId: appointment.patientId.toString(),
+        doctorId: appointment.doctorId.toString(),
+        dateTime: appointment.dateTime.toISOString(),
+        status: appointment.status,
+        symptoms: appointment.symptoms,
+        consultationAnalysis: appointment.consultationAnalysis,
+        description: appointment.description,
+        hasPrescription: !!appointment.prescriptionFile,
+        doctor: {
+          id: appointment.doctor.doctorProfile?.id.toString() || '',
+          userId: appointment.doctor.id.toString(),
+          name: appointment.doctor.username,
+          specialty: appointment.doctor.doctorProfile?.specialty || '',
+        },
+      };
+
+      return res.status(201).json(formattedAppointment);
     } catch (error) {
       console.error('Error creating appointment:', error);
       return res.status(500).json({ error: 'Failed to create appointment' });
@@ -286,4 +378,4 @@ router.delete('/appointments/:id', async (req: Request, res: Response): Promise<
   }
 });
 
-export default router; 
+export default router;
