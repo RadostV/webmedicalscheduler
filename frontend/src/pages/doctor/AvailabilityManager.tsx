@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -18,15 +18,15 @@ import {
   TableRow,
   IconButton,
   SelectChangeEvent,
-} from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import LoadingSpinner from "../../components/shared/LoadingSpinner";
-import ErrorMessage from "../../components/shared/ErrorMessage";
-import SuccessMessage from "../../components/shared/SuccessMessage";
-import Modal from "../../components/shared/Modal";
-import { format } from "date-fns";
-import { doctorService } from "../../services/doctor/doctor.service";
-import { Availability } from "../../types/doctor";
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import ErrorMessage from '../../components/shared/ErrorMessage';
+import SuccessMessage from '../../components/shared/SuccessMessage';
+import Modal from '../../components/shared/Modal';
+import { format } from 'date-fns';
+import { doctorService } from '../../services/doctor/doctor.service';
+import { Availability } from '../../types/doctor';
 
 interface DayAvailability extends Availability {
   day: string;
@@ -39,14 +39,12 @@ const AvailabilityManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [selectedAvailability, setSelectedAvailability] = useState<
-    string | null
-  >(null);
+  const [selectedAvailability, setSelectedAvailability] = useState<string | null>(null);
 
   // Form state
-  const [dayOfWeek, setDayOfWeek] = useState<number | "">("");
-  const [startTime, setStartTime] = useState<string>("09:00");
-  const [endTime, setEndTime] = useState<string>("17:00");
+  const [dayOfWeek, setDayOfWeek] = useState<number | ''>('');
+  const [startTime, setStartTime] = useState<string>('09:00');
+  const [endTime, setEndTime] = useState<string>('17:00');
   const [formErrors, setFormErrors] = useState({
     dayOfWeek: false,
     startTime: false,
@@ -57,13 +55,13 @@ const AvailabilityManager: React.FC = () => {
   // Days of the week mapping - wrapped in useMemo to prevent re-creation on each render
   const daysOfWeek = useMemo(
     () => [
-      { value: 0, label: "Sunday" },
-      { value: 1, label: "Monday" },
-      { value: 2, label: "Tuesday" },
-      { value: 3, label: "Wednesday" },
-      { value: 4, label: "Thursday" },
-      { value: 5, label: "Friday" },
-      { value: 6, label: "Saturday" },
+      { value: 0, label: 'Sunday' },
+      { value: 1, label: 'Monday' },
+      { value: 2, label: 'Tuesday' },
+      { value: 3, label: 'Wednesday' },
+      { value: 4, label: 'Thursday' },
+      { value: 5, label: 'Friday' },
+      { value: 6, label: 'Saturday' },
     ],
     []
   );
@@ -75,19 +73,17 @@ const AvailabilityManager: React.FC = () => {
         const availabilityList = await doctorService.getAvailability();
 
         // Convert to DayAvailability format with proper type conversion
-        const dayAvailabilities: DayAvailability[] = availabilityList.map(
-          (avail) => ({
-            ...avail,
-            id: avail.id.toString(),
-            doctorId: avail.doctorId.toString(),
-            day: daysOfWeek[avail.dayOfWeek].label,
-          })
-        );
+        const dayAvailabilities: DayAvailability[] = availabilityList.map((avail) => ({
+          ...avail,
+          id: avail.id.toString(),
+          doctorId: avail.doctorId.toString(),
+          day: daysOfWeek[avail.dayOfWeek].label,
+        }));
 
         setAvailabilities(dayAvailabilities);
         setError(null);
       } catch (err) {
-        setError("Failed to fetch availability. Please try again later.");
+        setError('Failed to fetch availability. Please try again later.');
         console.error(err);
       } finally {
         setLoading(false);
@@ -95,16 +91,14 @@ const AvailabilityManager: React.FC = () => {
     };
 
     fetchAvailability();
-  }, [daysOfWeek]);
+  }, []);
 
-  const handleDayChange = (event: SelectChangeEvent<number | "">) => {
+  const handleDayChange = (event: SelectChangeEvent<number | ''>) => {
     setDayOfWeek(event.target.value as number);
     setFormErrors({ ...formErrors, dayOfWeek: false });
   };
 
-  const handleStartTimeChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleStartTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setStartTime(event.target.value);
     setFormErrors({ ...formErrors, startTime: false, timeRange: false });
   };
@@ -116,7 +110,7 @@ const AvailabilityManager: React.FC = () => {
 
   const validateForm = () => {
     const errors = {
-      dayOfWeek: dayOfWeek === "",
+      dayOfWeek: dayOfWeek === '',
       startTime: !startTime,
       endTime: !endTime,
       timeRange: startTime >= endTime,
@@ -150,9 +144,7 @@ const AvailabilityManager: React.FC = () => {
       };
 
       // Update local state
-      const existingIndex = availabilities.findIndex(
-        (avail) => avail.dayOfWeek === dayOfWeek
-      );
+      const existingIndex = availabilities.findIndex((avail) => avail.dayOfWeek === dayOfWeek);
 
       if (existingIndex >= 0) {
         // Update existing availability
@@ -165,15 +157,15 @@ const AvailabilityManager: React.FC = () => {
       }
 
       // Clear the form
-      setDayOfWeek("");
-      setStartTime("09:00");
-      setEndTime("17:00");
+      setDayOfWeek('');
+      setStartTime('09:00');
+      setEndTime('17:00');
 
       // Show success message
-      setSuccessMessage("Availability saved successfully");
+      setSuccessMessage('Availability saved successfully');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError("Failed to save availability. Please try again later.");
+      setError('Failed to save availability. Please try again later.');
       console.error(err);
     } finally {
       setSaving(false);
@@ -192,18 +184,16 @@ const AvailabilityManager: React.FC = () => {
       await doctorService.deleteAvailability(selectedAvailability);
 
       // Remove from local state
-      setAvailabilities(
-        availabilities.filter((avail) => avail.id !== selectedAvailability)
-      );
+      setAvailabilities(availabilities.filter((avail) => avail.id !== selectedAvailability));
 
       setModalOpen(false);
       setSelectedAvailability(null);
 
       // Show success message
-      setSuccessMessage("Availability removed successfully");
+      setSuccessMessage('Availability removed successfully');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError("Failed to remove availability. Please try again later.");
+      setError('Failed to remove availability. Please try again later.');
       console.error(err);
     }
   };
@@ -214,11 +204,11 @@ const AvailabilityManager: React.FC = () => {
 
   // Format time for display
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":");
+    const [hours, minutes] = time.split(':');
     const date = new Date();
     date.setHours(parseInt(hours, 10));
     date.setMinutes(parseInt(minutes, 10));
-    return format(date, "h:mm a");
+    return format(date, 'h:mm a');
   };
 
   return (
@@ -243,11 +233,7 @@ const AvailabilityManager: React.FC = () => {
             </Typography>
 
             <Box component="form" onSubmit={handleSubmit} noValidate>
-              <FormControl
-                fullWidth
-                error={formErrors.dayOfWeek}
-                sx={{ mb: 2 }}
-              >
+              <FormControl fullWidth error={formErrors.dayOfWeek} sx={{ mb: 2 }}>
                 <InputLabel id="day-of-week-label">Day of Week</InputLabel>
                 <Select
                   labelId="day-of-week-label"
@@ -280,7 +266,7 @@ const AvailabilityManager: React.FC = () => {
                     fullWidth
                     InputLabelProps={{ shrink: true }}
                     error={formErrors.startTime || formErrors.timeRange}
-                    helperText={formErrors.startTime ? "Required" : ""}
+                    helperText={formErrors.startTime ? 'Required' : ''}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -293,29 +279,20 @@ const AvailabilityManager: React.FC = () => {
                     fullWidth
                     InputLabelProps={{ shrink: true }}
                     error={formErrors.endTime || formErrors.timeRange}
-                    helperText={formErrors.endTime ? "Required" : ""}
+                    helperText={formErrors.endTime ? 'Required' : ''}
                   />
                 </Grid>
               </Grid>
 
               {formErrors.timeRange && (
-                <Typography
-                  variant="caption"
-                  color="error"
-                  sx={{ display: "block", mt: 1 }}
-                >
+                <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
                   End time must be after start time
                 </Typography>
               )}
 
-              <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : "Save Availability"}
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button type="submit" variant="contained" color="primary" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Availability'}
                 </Button>
               </Box>
             </Box>
@@ -345,19 +322,10 @@ const AvailabilityManager: React.FC = () => {
                       .map((availability) => (
                         <TableRow key={availability.id}>
                           <TableCell>{availability.day}</TableCell>
+                          <TableCell>{formatTime(availability.startTime)}</TableCell>
+                          <TableCell>{formatTime(availability.endTime)}</TableCell>
                           <TableCell>
-                            {formatTime(availability.startTime)}
-                          </TableCell>
-                          <TableCell>
-                            {formatTime(availability.endTime)}
-                          </TableCell>
-                          <TableCell>
-                            <IconButton
-                              color="error"
-                              onClick={() =>
-                                handleDeleteAvailability(availability.id!)
-                              }
-                            >
+                            <IconButton color="error" onClick={() => handleDeleteAvailability(availability.id!)}>
                               <DeleteIcon />
                             </IconButton>
                           </TableCell>
@@ -367,7 +335,7 @@ const AvailabilityManager: React.FC = () => {
                 </Table>
               </TableContainer>
             ) : (
-              <Box sx={{ textAlign: "center", py: 4 }}>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body1">No availability set.</Typography>
               </Box>
             )}

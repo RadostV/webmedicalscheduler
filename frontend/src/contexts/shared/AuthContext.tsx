@@ -1,12 +1,12 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { AuthState, User, LoginRequest } from "../../types/shared/auth.types";
-import api from "../../config/api.config";
-import { authService } from "../../services/shared/auth.service";
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { AuthState, User, LoginRequest, AuthResponse } from '../../types/shared/auth.types';
+import api from '../../config/api.config';
+import { authService } from '../../services/shared/auth.service';
 
 interface RegisterRequest {
   username: string;
   password: string;
-  type: "patient" | "doctor";
+  type: 'patient' | 'doctor';
   specialty?: string;
 }
 
@@ -31,21 +31,21 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 // Action types
 type AuthAction =
-  | { type: "LOGIN_REQUEST" }
-  | { type: "LOGIN_SUCCESS"; payload: { user: User; token: string } }
-  | { type: "LOGIN_FAILURE"; payload: string }
-  | { type: "LOGOUT" };
+  | { type: 'LOGIN_REQUEST' }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: User; token: string } }
+  | { type: 'LOGIN_FAILURE'; payload: string }
+  | { type: 'LOGOUT' };
 
 // Auth reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
-    case "LOGIN_REQUEST":
+    case 'LOGIN_REQUEST':
       return {
         ...state,
         loading: true,
         error: null,
       };
-    case "LOGIN_SUCCESS":
+    case 'LOGIN_SUCCESS':
       return {
         ...state,
         isAuthenticated: true,
@@ -54,7 +54,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         loading: false,
         error: null,
       };
-    case "LOGIN_FAILURE":
+    case 'LOGIN_FAILURE':
       return {
         ...state,
         isAuthenticated: false,
@@ -63,7 +63,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         loading: false,
         error: action.payload,
       };
-    case "LOGOUT":
+    case 'LOGOUT':
       return {
         ...initialState,
       };
@@ -73,56 +73,53 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 };
 
 // Provider component
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Setup the reducer with the initial state
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   // Check for existing token on mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
 
     if (token && user) {
       try {
         const parsedUser = JSON.parse(user);
         dispatch({
-          type: "LOGIN_SUCCESS",
+          type: 'LOGIN_SUCCESS',
           payload: { user: parsedUser, token },
         });
       } catch (error) {
         // Handle invalid stored user
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
     }
   }, []);
 
   // Login function
   const login = async (credentials: LoginRequest): Promise<void> => {
-    dispatch({ type: "LOGIN_REQUEST" });
+    dispatch({ type: 'LOGIN_REQUEST' });
 
     try {
       const response = await api.post<{
         token: string;
         user: User;
-      }>("/auth/login", credentials);
+      }>('/auth/login', credentials);
 
       // Store token and user in local storage
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
 
       // Update state
       dispatch({
-        type: "LOGIN_SUCCESS",
+        type: 'LOGIN_SUCCESS',
         payload: { user: response.data.user, token: response.data.token },
       });
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || error.message || "Failed to login";
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
       dispatch({
-        type: "LOGIN_FAILURE",
+        type: 'LOGIN_FAILURE',
         payload: errorMessage,
       });
       throw new Error(errorMessage);
@@ -131,32 +128,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Logout function
   const logout = (): void => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    dispatch({ type: "LOGOUT" });
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    dispatch({ type: 'LOGOUT' });
   };
 
   // Register function
   const register = async (data: RegisterRequest): Promise<void> => {
-    dispatch({ type: "LOGIN_REQUEST" });
+    dispatch({ type: 'LOGIN_REQUEST' });
 
     try {
       const response = await authService.register(data);
 
       // Store token and user in local storage
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
 
       // Update state
       dispatch({
-        type: "LOGIN_SUCCESS",
+        type: 'LOGIN_SUCCESS',
         payload: { user: response.user, token: response.token },
       });
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || error.message || "Failed to register";
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to register';
       dispatch({
-        type: "LOGIN_FAILURE",
+        type: 'LOGIN_FAILURE',
         payload: errorMessage,
       });
       throw new Error(errorMessage);
@@ -178,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

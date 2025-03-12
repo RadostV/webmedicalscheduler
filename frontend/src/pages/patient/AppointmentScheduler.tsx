@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -12,26 +12,29 @@ import {
   SelectChangeEvent,
   Grid,
   FormHelperText,
-} from "@mui/material";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { format, addDays, isBefore, startOfMonth, endOfMonth } from "date-fns";
-import LoadingSpinner from "../../components/shared/LoadingSpinner";
-import ErrorMessage from "../../components/shared/ErrorMessage";
-import SuccessMessage from "../../components/shared/SuccessMessage";
-import Modal from "../../components/shared/Modal";
-import { Doctor } from "../../types/doctor";
-import { TimeSlot } from "../../types/appointment";
-import { patientService } from "../../services/patient/patient.service";
+} from '@mui/material';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { format, addDays, isBefore, getDay, startOfMonth, endOfMonth } from 'date-fns';
+import { useAuth } from '../../contexts/shared/AuthContext';
+import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import ErrorMessage from '../../components/shared/ErrorMessage';
+import SuccessMessage from '../../components/shared/SuccessMessage';
+import Modal from '../../components/shared/Modal';
+import { Doctor } from '../../types/doctor';
+import { TimeSlot } from '../../types/appointment';
+import { patientService } from '../../services/patient/patient.service';
+import { doctorService } from '../../services/doctor/doctor.service';
+import { Availability } from '../../types/doctor';
 
 const AppointmentScheduler: React.FC = () => {
   const navigate = useNavigate();
 
   // State
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctor, setSelectedDoctor] = useState<string>("");
+  const [selectedDoctor, setSelectedDoctor] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,11 +57,8 @@ const AppointmentScheduler: React.FC = () => {
 
       while (currentDate <= endDate) {
         try {
-          const formattedDate = format(currentDate, "yyyy-MM-dd");
-          const slots = await patientService.getDoctorSlots(
-            selectedDoctor,
-            formattedDate
-          );
+          const formattedDate = format(currentDate, 'yyyy-MM-dd');
+          const slots = await patientService.getDoctorSlots(selectedDoctor, formattedDate);
           if (slots.length > 0) {
             dates.add(formattedDate);
           }
@@ -105,7 +105,7 @@ const AppointmentScheduler: React.FC = () => {
     }
 
     // Check if the date has available slots
-    const formattedDate = format(date, "yyyy-MM-dd");
+    const formattedDate = format(date, 'yyyy-MM-dd');
     return availableDates.has(formattedDate);
   };
 
@@ -118,7 +118,7 @@ const AppointmentScheduler: React.FC = () => {
         setDoctors(doctorsList);
         setError(null);
       } catch (err) {
-        setError("Failed to fetch doctors. Please try again later.");
+        setError('Failed to fetch doctors. Please try again later.');
         console.error(err);
       } finally {
         setLoading(false);
@@ -142,9 +142,7 @@ const AppointmentScheduler: React.FC = () => {
         setTimeSlots([]);
         setError(null);
       } catch (err) {
-        setError(
-          "Failed to fetch doctor's availability. Please try again later."
-        );
+        setError("Failed to fetch doctor's availability. Please try again later.");
         console.error(err);
       } finally {
         setLoading(false);
@@ -159,11 +157,8 @@ const AppointmentScheduler: React.FC = () => {
 
     setLoading(true);
     try {
-      const formattedDate = format(selectedDate, "yyyy-MM-dd");
-      const slots = await patientService.getDoctorSlots(
-        selectedDoctor,
-        formattedDate
-      );
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      const slots = await patientService.getDoctorSlots(selectedDoctor, formattedDate);
 
       // Convert slots to TimeSlot format with proper typing
       const timeSlots: TimeSlot[] = slots.map((time: string) => ({
@@ -175,16 +170,11 @@ const AppointmentScheduler: React.FC = () => {
       setError(null);
     } catch (err: any) {
       // Don't show error message for no availability, just clear the slots
-      if (
-        err.response?.status === 404 &&
-        err.response?.data?.error === "No availability found for this day"
-      ) {
+      if (err.response?.status === 404 && err.response?.data?.error === 'No availability found for this day') {
         setTimeSlots([]);
         setError(null);
       } else {
-        setError(
-          "Failed to fetch available time slots. Please try again later."
-        );
+        setError('Failed to fetch available time slots. Please try again later.');
         console.error(err);
       }
     } finally {
@@ -198,20 +188,20 @@ const AppointmentScheduler: React.FC = () => {
       fetchTimeSlots();
     } else {
       setTimeSlots([]);
-      setSelectedTime("");
+      setSelectedTime('');
     }
   }, [selectedDoctor, selectedDate, fetchTimeSlots]);
 
   const handleDoctorChange = (event: SelectChangeEvent) => {
     setSelectedDoctor(event.target.value);
     setSelectedDate(null);
-    setSelectedTime("");
+    setSelectedTime('');
     setFormErrors({ ...formErrors, doctor: false });
   };
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
-    setSelectedTime("");
+    setSelectedTime('');
     setFormErrors({ ...formErrors, date: false });
   };
 
@@ -243,7 +233,7 @@ const AppointmentScheduler: React.FC = () => {
     setLoading(true);
     try {
       const dateTime = new Date(selectedDate);
-      const [hours, minutes] = selectedTime.split(":");
+      const [hours, minutes] = selectedTime.split(':');
       dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
       await patientService.scheduleAppointment({
@@ -252,15 +242,15 @@ const AppointmentScheduler: React.FC = () => {
       });
 
       // Show success message
-      setSuccessMessage("Appointment scheduled successfully");
+      setSuccessMessage('Appointment scheduled successfully');
       setModalOpen(false);
 
       // Redirect after a short delay to show the success message
       setTimeout(() => {
-        navigate("/patient/appointments");
+        navigate('/patient/appointments');
       }, 2000);
     } catch (err) {
-      setError("Failed to schedule appointment. Please try again later.");
+      setError('Failed to schedule appointment. Please try again later.');
       console.error(err);
       setModalOpen(false);
     } finally {
@@ -277,16 +267,11 @@ const AppointmentScheduler: React.FC = () => {
   }
 
   // Get doctor name for confirmation message
-  const selectedDoctorName =
-    doctors.find((doctor) => doctor.userId === selectedDoctor)?.name || "";
+  const selectedDoctorName = doctors.find((doctor) => doctor.userId === selectedDoctor)?.name || '';
 
   // Format date and time for confirmation message
-  const formattedDate = selectedDate
-    ? format(selectedDate, "MMMM d, yyyy")
-    : "";
-  const formattedTime = selectedTime
-    ? format(new Date(`2000-01-01T${selectedTime}`), "h:mm a")
-    : "";
+  const formattedDate = selectedDate ? format(selectedDate, 'MMMM d, yyyy') : '';
+  const formattedTime = selectedTime ? format(new Date(`2000-01-01T${selectedTime}`), 'h:mm a') : '';
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -315,9 +300,7 @@ const AppointmentScheduler: React.FC = () => {
                   </MenuItem>
                 ))}
               </Select>
-              {formErrors.doctor && (
-                <FormHelperText>Please select a doctor</FormHelperText>
-              )}
+              {formErrors.doctor && <FormHelperText>Please select a doctor</FormHelperText>}
             </FormControl>
           </Grid>
 
@@ -328,17 +311,15 @@ const AppointmentScheduler: React.FC = () => {
               </Typography>
               <Box
                 sx={{
-                  ".react-datepicker-wrapper": {
-                    width: "100%",
+                  '.react-datepicker-wrapper': {
+                    width: '100%',
                   },
-                  ".react-datepicker__input-container input": {
-                    width: "100%",
-                    padding: "16.5px 14px",
-                    borderRadius: "4px",
-                    border: formErrors.date
-                      ? "1px solid #d32f2f"
-                      : "1px solid rgba(0, 0, 0, 0.23)",
-                    fontSize: "1rem",
+                  '.react-datepicker__input-container input': {
+                    width: '100%',
+                    padding: '16.5px 14px',
+                    borderRadius: '4px',
+                    border: formErrors.date ? '1px solid #d32f2f' : '1px solid rgba(0, 0, 0, 0.23)',
+                    fontSize: '1rem',
                   },
                 }}
               >
@@ -353,18 +334,12 @@ const AppointmentScheduler: React.FC = () => {
                   onMonthChange={handleMonthChange}
                 />
               </Box>
-              {formErrors.date && (
-                <FormHelperText error>Please select a date</FormHelperText>
-              )}
+              {formErrors.date && <FormHelperText error>Please select a date</FormHelperText>}
             </Box>
           </Grid>
 
           <Grid item xs={12}>
-            <FormControl
-              fullWidth
-              disabled={!selectedDoctor || !selectedDate}
-              error={formErrors.time}
-            >
+            <FormControl fullWidth disabled={!selectedDoctor || !selectedDate} error={formErrors.time}>
               <InputLabel id="time-slot-label">Select Time</InputLabel>
               <Select
                 labelId="time-slot-label"
@@ -377,31 +352,20 @@ const AppointmentScheduler: React.FC = () => {
                   .filter((slot) => slot.available)
                   .map((slot) => (
                     <MenuItem key={slot.time} value={slot.time}>
-                      {format(new Date(`2000-01-01T${slot.time}`), "h:mm a")}
+                      {format(new Date(`2000-01-01T${slot.time}`), 'h:mm a')}
                     </MenuItem>
                   ))}
               </Select>
-              {formErrors.time && (
-                <FormHelperText>Please select a time</FormHelperText>
-              )}
+              {formErrors.time && <FormHelperText>Please select a time</FormHelperText>}
             </FormControl>
           </Grid>
 
           <Grid item xs={12}>
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-              <Button
-                variant="outlined"
-                sx={{ mr: 2 }}
-                onClick={() => navigate("/patient/appointments")}
-              >
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Button variant="outlined" sx={{ mr: 2 }} onClick={() => navigate('/patient/appointments')}>
                 Cancel
               </Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleScheduleClick}
-                disabled={loading}
-              >
+              <Button variant="contained" color="primary" onClick={handleScheduleClick} disabled={loading}>
                 Schedule Appointment
               </Button>
             </Box>

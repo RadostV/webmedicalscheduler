@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -13,22 +13,19 @@ import {
   TableRow,
   Chip,
   Button,
-} from "@mui/material";
-import { format } from "date-fns";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import LoadingSpinner from "../../components/shared/LoadingSpinner";
-import ErrorMessage from "../../components/shared/ErrorMessage";
-import SuccessMessage from "../../components/shared/SuccessMessage";
-import Modal from "../../components/shared/Modal";
-import { doctorService } from "../../services/doctor/doctor.service";
-import {
-  Appointment,
-  AppointmentStatus,
-  CalendarEvent,
-} from "../../types/shared/appointment.types";
+} from '@mui/material';
+import { format } from 'date-fns';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import ErrorMessage from '../../components/shared/ErrorMessage';
+import SuccessMessage from '../../components/shared/SuccessMessage';
+import Modal from '../../components/shared/Modal';
+import { doctorService } from '../../services/doctor/doctor.service';
+import { Appointment, AppointmentStatus, CalendarEvent } from '../../types/shared/appointment.types';
+import { useNavigate } from 'react-router-dom';
 
 const Schedule: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -42,21 +39,20 @@ const Schedule: React.FC = () => {
     message: string;
     action: () => Promise<void>;
   }>({
-    title: "",
-    message: "",
+    title: '',
+    message: '',
     action: async () => {},
   });
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [actionModalOpen, setActionModalOpen] = useState(false);
 
   // Log state changes for debugging
   useEffect(() => {
-    console.log("Selected appointment changed:", selectedAppointment);
+    console.log('Selected appointment changed:', selectedAppointment);
   }, [selectedAppointment]);
 
   useEffect(() => {
-    console.log("Action modal open state changed:", actionModalOpen);
+    console.log('Action modal open state changed:', actionModalOpen);
   }, [actionModalOpen]);
 
   useEffect(() => {
@@ -67,20 +63,17 @@ const Schedule: React.FC = () => {
     setLoading(true);
     try {
       const fetchedAppointments = await doctorService.getAppointments();
-      console.log("Fetched appointments:", fetchedAppointments);
+      console.log('Fetched appointments:', fetchedAppointments);
 
       if (fetchedAppointments.length > 0) {
-        console.log("First appointment ID:", fetchedAppointments[0].id);
-        console.log(
-          "First appointment ID type:",
-          typeof fetchedAppointments[0].id
-        );
+        console.log('First appointment ID:', fetchedAppointments[0].id);
+        console.log('First appointment ID type:', typeof fetchedAppointments[0].id);
       }
 
       setAppointments(fetchedAppointments);
       setError(null);
     } catch (err) {
-      setError("Failed to fetch appointments. Please try again later.");
+      setError('Failed to fetch appointments. Please try again later.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -91,18 +84,15 @@ const Schedule: React.FC = () => {
     setTabValue(newValue);
   };
 
-  const handleStatusChange = (
-    appointment: Appointment,
-    status: AppointmentStatus
-  ) => {
-    let title = "";
-    let message = "";
+  const handleStatusChange = (appointment: Appointment, status: AppointmentStatus) => {
+    let title = '';
+    let message = '';
 
-    if (status === "completed") {
-      title = "Mark as Completed";
+    if (status === 'completed') {
+      title = 'Mark as Completed';
       message = `Are you sure you want to mark the appointment with ${appointment.patientName} as completed?`;
-    } else if (status === "cancelled") {
-      title = "Cancel Appointment";
+    } else if (status === 'cancelled') {
+      title = 'Cancel Appointment';
       message = `Are you sure you want to cancel the appointment with ${appointment.patientName}?`;
     }
 
@@ -112,19 +102,16 @@ const Schedule: React.FC = () => {
       action: async () => {
         try {
           setLoading(true);
-          const updatedAppointment =
-            await doctorService.updateAppointmentStatus(appointment.id, status);
+          const updatedAppointment = await doctorService.updateAppointmentStatus(appointment.id, status);
 
           setAppointments((prevAppointments) =>
-            prevAppointments.map((app) =>
-              app.id === appointment.id ? { ...updatedAppointment } : app
-            )
+            prevAppointments.map((app) => (app.id === appointment.id ? { ...updatedAppointment } : app))
           );
 
           const successMsg =
-            status === "completed"
-              ? "Appointment marked as completed successfully"
-              : "Appointment cancelled successfully";
+            status === 'completed'
+              ? 'Appointment marked as completed successfully'
+              : 'Appointment cancelled successfully';
           setSuccessMessage(successMsg);
           setTimeout(() => setSuccessMessage(null), 3000);
 
@@ -133,10 +120,8 @@ const Schedule: React.FC = () => {
           setSelectedAppointment(null);
           setError(null);
         } catch (err) {
-          console.error("Error updating appointment status:", err);
-          setError(
-            `Failed to update appointment status. Please try again later.`
-          );
+          console.error('Error updating appointment status:', err);
+          setError(`Failed to update appointment status. Please try again later.`);
         } finally {
           setLoading(false);
         }
@@ -148,34 +133,32 @@ const Schedule: React.FC = () => {
 
   const getStatusChipColor = (status: AppointmentStatus) => {
     switch (status) {
-      case "scheduled":
-        return "primary";
-      case "completed":
-        return "success";
-      case "cancelled":
-        return "error";
+      case 'scheduled':
+        return 'primary';
+      case 'completed':
+        return 'success';
+      case 'cancelled':
+        return 'error';
       default:
-        return "default";
+        return 'default';
     }
   };
 
   const getStatusColor = (status: AppointmentStatus) => {
     switch (status) {
-      case "scheduled":
-        return "#1976d2"; // primary blue
-      case "completed":
-        return "#2e7d32"; // success green
-      case "cancelled":
-        return "#d32f2f"; // error red
+      case 'scheduled':
+        return '#1976d2'; // primary blue
+      case 'completed':
+        return '#2e7d32'; // success green
+      case 'cancelled':
+        return '#d32f2f'; // error red
       default:
-        return "#757575"; // default gray
+        return '#757575'; // default gray
     }
   };
 
-  const convertToCalendarEvents = (
-    appointments: Appointment[]
-  ): CalendarEvent[] => {
-    console.log("Converting appointments to calendar events");
+  const convertToCalendarEvents = (appointments: Appointment[]): CalendarEvent[] => {
+    console.log('Converting appointments to calendar events');
     return appointments.map((appointment) => {
       const startDate = new Date(appointment.dateTime);
       const endDate = new Date(startDate);
@@ -194,7 +177,7 @@ const Schedule: React.FC = () => {
         doctorId: appointment.doctorId,
       };
 
-      console.log("Created calendar event:", event);
+      console.log('Created calendar event:', event);
       return event;
     });
   };
@@ -216,13 +199,7 @@ const Schedule: React.FC = () => {
       {successMessage && <SuccessMessage message={successMessage} />}
 
       <Paper sx={{ mt: 3 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          centered
-        >
+        <Tabs value={tabValue} onChange={handleTabChange} indicatorColor="primary" textColor="primary" centered>
           <Tab label="List View" />
           <Tab label="Calendar View" />
         </Tabs>
@@ -252,25 +229,18 @@ const Schedule: React.FC = () => {
                             setActionModalOpen(true);
                           }}
                           sx={{
-                            cursor: "pointer",
-                            "&:hover": {
-                              backgroundColor: "rgba(0, 0, 0, 0.04)",
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
                             },
                           }}
                         >
                           <TableCell>{appointment.patientName}</TableCell>
-                          <TableCell>
-                            {format(appointmentDate, "MMM dd, yyyy")}
-                          </TableCell>
-                          <TableCell>
-                            {format(appointmentDate, "h:mm a")}
-                          </TableCell>
+                          <TableCell>{format(appointmentDate, 'MMM dd, yyyy')}</TableCell>
+                          <TableCell>{format(appointmentDate, 'h:mm a')}</TableCell>
                           <TableCell>
                             <Chip
-                              label={
-                                appointment.status.charAt(0).toUpperCase() +
-                                appointment.status.slice(1)
-                              }
+                              label={appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                               color={getStatusChipColor(appointment.status)}
                               size="small"
                             />
@@ -282,7 +252,7 @@ const Schedule: React.FC = () => {
                 </Table>
               </TableContainer>
             ) : (
-              <Box sx={{ textAlign: "center", py: 4 }}>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body1">No appointments found.</Typography>
               </Box>
             )
@@ -292,9 +262,9 @@ const Schedule: React.FC = () => {
               <FullCalendar
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 headerToolbar={{
-                  left: "prev,next today",
-                  center: "title",
-                  right: "dayGridMonth,timeGridWeek,timeGridDay",
+                  left: 'prev,next today',
+                  center: 'title',
+                  right: 'dayGridMonth,timeGridWeek,timeGridDay',
                 }}
                 initialView="timeGridWeek"
                 editable={false}
@@ -302,49 +272,37 @@ const Schedule: React.FC = () => {
                 selectMirror={true}
                 dayMaxEvents={true}
                 eventTimeFormat={{
-                  hour: "numeric",
-                  minute: "2-digit",
-                  meridiem: "short",
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  meridiem: 'short',
                 }}
                 eventDisplay="block"
                 eventClassNames="clickable-event"
                 eventDidMount={(info) => {
-                  info.el.style.cursor = "pointer";
+                  info.el.style.cursor = 'pointer';
                 }}
                 events={convertToCalendarEvents(appointments)}
                 eventContent={(eventInfo) => {
-                  const status = eventInfo.event.extendedProps
-                    .status as AppointmentStatus;
+                  const status = eventInfo.event.extendedProps.status as AppointmentStatus;
                   const eventId = eventInfo.event.id;
 
                   const handleEventClick = () => {
-                    console.log("Event box clicked directly:", eventId);
+                    console.log('Event box clicked directly:', eventId);
 
                     // Ensure consistent ID type comparison
                     const stringEventId = String(eventId);
-                    console.log(
-                      "Converted event ID for box click:",
-                      stringEventId
-                    );
+                    console.log('Converted event ID for box click:', stringEventId);
 
-                    const appointment = appointments.find(
-                      (app) => String(app.id) === stringEventId
-                    );
+                    const appointment = appointments.find((app) => String(app.id) === stringEventId);
 
                     if (appointment) {
-                      console.log(
-                        "Setting appointment and opening modal from box click:",
-                        appointment
-                      );
+                      console.log('Setting appointment and opening modal from box click:', appointment);
                       setSelectedAppointment(appointment);
                       setActionModalOpen(true);
                     } else {
+                      console.log('No appointment found with ID:', stringEventId);
                       console.log(
-                        "No appointment found with ID:",
-                        stringEventId
-                      );
-                      console.log(
-                        "Available appointment IDs:",
+                        'Available appointment IDs:',
                         appointments.map((app) => String(app.id))
                       );
                     }
@@ -355,26 +313,26 @@ const Schedule: React.FC = () => {
                       onClick={handleEventClick}
                       sx={{
                         p: 0.5,
-                        height: "100%",
-                        width: "100%",
+                        height: '100%',
+                        width: '100%',
                         backgroundColor: getStatusColor(status),
-                        color: "#fff",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        "&:hover": {
+                        color: '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        '&:hover': {
                           opacity: 0.9,
-                          transform: "scale(1.02)",
-                          transition: "all 0.1s ease-in-out",
+                          transform: 'scale(1.02)',
+                          transition: 'all 0.1s ease-in-out',
                         },
                       }}
                     >
                       <Typography
                         sx={{
-                          fontSize: "0.75rem",
+                          fontSize: '0.75rem',
                           fontWeight: 500,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {eventInfo.event.title}
@@ -383,24 +341,20 @@ const Schedule: React.FC = () => {
                   );
                 }}
                 eventClick={(clickInfo) => {
-                  console.log("Event clicked:", clickInfo.event);
-                  console.log("Event ID:", clickInfo.event.id);
-                  console.log("All appointments:", appointments);
+                  console.log('Event clicked:', clickInfo.event);
+                  console.log('Event ID:', clickInfo.event.id);
+                  console.log('All appointments:', appointments);
 
                   // Ensure consistent ID type comparison
                   const eventId = String(clickInfo.event.id);
-                  console.log("Converted event ID for comparison:", eventId);
+                  console.log('Converted event ID for comparison:', eventId);
 
-                  const appointment = appointments.find(
-                    (app) => String(app.id) === eventId
-                  );
+                  const appointment = appointments.find((app) => String(app.id) === eventId);
 
-                  console.log("Found appointment:", appointment);
+                  console.log('Found appointment:', appointment);
 
                   if (appointment) {
-                    console.log(
-                      "Setting selected appointment and opening modal"
-                    );
+                    console.log('Setting selected appointment and opening modal');
                     setSelectedAppointment(appointment);
                     setActionModalOpen(true);
                   }
@@ -430,29 +384,29 @@ const Schedule: React.FC = () => {
                 new Date(selectedAppointment.dateTime),
                 "MMM dd, yyyy 'at' h:mm a"
               )}`
-            : "No appointment selected"
+            : 'No appointment selected'
         }
         onCancel={() => {
-          console.log("Closing action modal");
+          console.log('Closing action modal');
           setActionModalOpen(false);
           setSelectedAppointment(null);
         }}
         customActions={
-          selectedAppointment?.status === "scheduled" ? (
+          selectedAppointment?.status === 'scheduled' ? (
             <Box
               sx={{
                 mt: 2,
-                display: "flex",
+                display: 'flex',
                 gap: 1,
-                justifyContent: "flex-end",
+                justifyContent: 'flex-end',
               }}
             >
               <Button
                 variant="contained"
                 color="success"
                 onClick={() => {
-                  console.log("Complete button clicked");
-                  handleStatusChange(selectedAppointment, "completed");
+                  console.log('Complete button clicked');
+                  handleStatusChange(selectedAppointment, 'completed');
                 }}
               >
                 Complete
@@ -461,8 +415,8 @@ const Schedule: React.FC = () => {
                 variant="contained"
                 color="error"
                 onClick={() => {
-                  console.log("Cancel button clicked");
-                  handleStatusChange(selectedAppointment, "cancelled");
+                  console.log('Cancel button clicked');
+                  handleStatusChange(selectedAppointment, 'cancelled');
                 }}
               >
                 Cancel
@@ -470,7 +424,7 @@ const Schedule: React.FC = () => {
               <Button
                 variant="outlined"
                 onClick={() => {
-                  console.log("Close button clicked");
+                  console.log('Close button clicked');
                   setActionModalOpen(false);
                   setSelectedAppointment(null);
                 }}
@@ -479,11 +433,11 @@ const Schedule: React.FC = () => {
               </Button>
             </Box>
           ) : (
-            <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 variant="outlined"
                 onClick={() => {
-                  console.log("Close button clicked");
+                  console.log('Close button clicked');
                   setActionModalOpen(false);
                   setSelectedAppointment(null);
                 }}
