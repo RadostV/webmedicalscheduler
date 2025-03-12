@@ -2,8 +2,26 @@ import { Router, Request, Response } from 'express';
 import { body } from 'express-validator';
 import { prisma } from '../index';
 import { validateRequest } from '../middleware/validate.middleware';
+import { authenticateToken } from '../middleware/auth.middleware';
+import multer from 'multer';
+import { storage } from '../config/cloudinary.config';
 
 const router = Router();
+const upload = multer({ storage });
+
+// Apply authentication middleware to all doctor routes
+router.use(authenticateToken);
+
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: number;
+    type: string;
+  };
+}
+
+interface MulterAuthRequest extends AuthenticatedRequest {
+  file?: Express.Multer.File;
+}
 
 interface SetAvailabilityRequest {
   dayOfWeek: number;
@@ -21,8 +39,12 @@ interface AppointmentWithDateTime {
 // Set availability validation
 const setAvailabilityValidation = [
   body('dayOfWeek').isInt({ min: 0, max: 6 }).withMessage('Day of week must be between 0 and 6'),
-  body('startTime').matches(/^([01]\d|2[0-3]):([0-5]\d)$/).withMessage('Start time must be in HH:mm format'),
-  body('endTime').matches(/^([01]\d|2[0-3]):([0-5]\d)$/).withMessage('End time must be in HH:mm format'),
+  body('startTime')
+    .matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .withMessage('Start time must be in HH:mm format'),
+  body('endTime')
+    .matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .withMessage('End time must be in HH:mm format'),
 ];
 
 /**
@@ -91,7 +113,7 @@ router.get('/', async (_req: Request, res: Response): Promise<Response> => {
     });
 
     // Transform the response to match the frontend Doctor type
-    const formattedDoctors = doctors.map(doctor => ({
+    const formattedDoctors = doctors.map((doctor) => ({
       id: doctor.id.toString(),
       userId: doctor.userId.toString(),
       specialty: doctor.specialty,
@@ -441,9 +463,7 @@ router.get('/slots', async (req: Request, res: Response): Promise<Response> => {
       },
     });
 
-    const bookedTimes = new Set(
-      bookedAppointments.map(apt => apt.dateTime.toTimeString().slice(0, 5))
-    );
+    const bookedTimes = new Set(bookedAppointments.map((apt) => apt.dateTime.toTimeString().slice(0, 5)));
 
     const availableSlots = slots.filter((slot) => !bookedTimes.has(slot));
 
@@ -531,9 +551,7 @@ router.get('/:id/slots', async (req: Request, res: Response): Promise<Response> 
       },
     });
 
-    const bookedTimes = new Set(
-      bookedAppointments.map(apt => apt.dateTime.toTimeString().slice(0, 5))
-    );
+    const bookedTimes = new Set(bookedAppointments.map((apt) => apt.dateTime.toTimeString().slice(0, 5)));
 
     const availableSlots = slots.filter((slot) => !bookedTimes.has(slot));
 
@@ -636,6 +654,186 @@ router.patch('/appointments/:id/status', async (req: Request, res: Response): Pr
   }
 });
 
+/**
+ * @swagger
+ * /api/doctors/profile:
+ *   patch:
+ *     summary: Update doctor's profile
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               specialty:
+ *                 type: string
+ *               education:
+ *                 type: string
+ *               qualification:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               siteUrl:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               location:
+ *                 type: string
+ *               languages:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       404:
+ *         description: Doctor profile not found
+ *       500:
+ *         description: Failed to update profile
+ */
+router.patch('/profile', async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const { specialty, education, qualification, description, siteUrl, phone, email, location, languages } = req.body;
+
+    const doctorProfile = await prisma.doctor.findUnique({
+      where: {
+        userId: req.user!.id,
+      },
+    });
+
+    if (!doctorProfile) {
+      return res.status(404).json({ error: 'Doctor profile not found' });
+    }
+
+    if (email && email !== doctorProfile.email) {
+      const existingDoctor = await prisma.doctor.findFirst({
+        where: {
+          email,
+          NOT: {
+            id: doctorProfile.id,
+          },
+        },
+      });
+
+      if (existingDoctor) {
+        return res.status(400).json({ error: 'Email already registered' });
+      }
+    }
+
+    const updatedProfile = await prisma.doctor.update({
+      where: {
+        userId: req.user!.id,
+      },
+      data: {
+        specialty: specialty || undefined,
+        education: education || undefined,
+        qualification: qualification || undefined,
+        description: description || undefined,
+        siteUrl: siteUrl || undefined,
+        phone: phone || undefined,
+        email: email || undefined,
+        location: location || undefined,
+        languages: languages || undefined,
+      },
+    });
+
+    return res.json(updatedProfile);
+  } catch (error) {
+    console.error('Error updating doctor profile:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/doctors/profile/photo:
+ *   post:
+ *     summary: Upload doctor's profile photo
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Photo uploaded successfully
+ *       404:
+ *         description: Doctor profile not found
+ *       500:
+ *         description: Failed to upload photo
+ */
+router.post(
+  '/profile/photo',
+  upload.single('photo'),
+  async (req: MulterAuthRequest, res: Response): Promise<Response> => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No photo uploaded' });
+      }
+
+      const doctorProfile = await prisma.doctor.findUnique({
+        where: {
+          userId: req.user!.id,
+        },
+      });
+
+      if (!doctorProfile) {
+        return res.status(404).json({ error: 'Doctor profile not found' });
+      }
+
+      const updatedProfile = await prisma.doctor.update({
+        where: {
+          userId: req.user!.id,
+        },
+        data: {
+          photoUrl: req.file.path,
+        },
+      });
+
+      return res.json(updatedProfile);
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      return res.status(500).json({ error: 'Failed to upload photo' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/doctors/test-auth:
+ *   get:
+ *     summary: Test authentication
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *       401:
+ *         description: Authentication failed
+ */
+router.get('/test-auth', async (req: AuthenticatedRequest, res: Response) => {
+  return res.json({
+    message: 'Authentication successful',
+    user: {
+      id: req.user?.id,
+      type: req.user?.type,
+    },
+  });
+});
+
 // Helper function to generate time slots
 function generateTimeSlots(date: Date, startTime: string, endTime: string): string[] {
   const slots: string[] = [];
@@ -656,4 +854,4 @@ function generateTimeSlots(date: Date, startTime: string, endTime: string): stri
   return slots;
 }
 
-export default router; 
+export default router;

@@ -25,11 +25,20 @@ model User {
 }
 
 model Doctor {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @unique
-  specialty  String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  specialty    String
+  education    String
+  qualification String
+  description   String   // Doctor's professional description
+  siteUrl      String?  // Optional field
+  phone        String
+  email        String   @unique
+  location     String
+  languages    String   // Stored as comma-separated values
+  photoUrl     String?  // Optional field for doctor's photo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
   // Relations
   user         User          @relation(fields: [userId], references: [id])

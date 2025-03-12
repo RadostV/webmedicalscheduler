@@ -17,6 +17,14 @@ interface RegisterRequest {
   password: string;
   type: 'patient' | 'doctor';
   specialty?: string;
+  education?: string;
+  qualification?: string;
+  description?: string;
+  siteUrl?: string;
+  phone?: string;
+  email?: string;
+  location?: string;
+  languages?: string;
 }
 
 /**
@@ -127,11 +135,7 @@ router.post(
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      const token = jwt.sign(
-        { userId: user.id, type: user.type },
-        process.env.JWT_SECRET!,
-        { expiresIn: '24h' }
-      );
+      const token = jwt.sign({ userId: user.id, type: user.type }, process.env.JWT_SECRET!, { expiresIn: '24h' });
 
       return res.json({
         token,
@@ -153,10 +157,24 @@ const registerValidation = [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
   body('type').isIn(['patient', 'doctor']).withMessage('Invalid user type'),
-  body('specialty')
+  body('specialty').if(body('type').equals('doctor')).notEmpty().withMessage('Specialty is required for doctors'),
+  body('education').if(body('type').equals('doctor')).notEmpty().withMessage('Education is required for doctors'),
+  body('qualification')
     .if(body('type').equals('doctor'))
     .notEmpty()
-    .withMessage('Specialty is required for doctors'),
+    .withMessage('Qualification is required for doctors'),
+  body('description')
+    .if(body('type').equals('doctor'))
+    .notEmpty()
+    .withMessage('Professional description is required for doctors'),
+  body('phone').if(body('type').equals('doctor')).notEmpty().withMessage('Phone is required for doctors'),
+  body('email')
+    .if(body('type').equals('doctor'))
+    .notEmpty()
+    .isEmail()
+    .withMessage('Valid email is required for doctors'),
+  body('location').if(body('type').equals('doctor')).notEmpty().withMessage('Location is required for doctors'),
+  body('languages').if(body('type').equals('doctor')).notEmpty().withMessage('Languages are required for doctors'),
 ];
 
 /**
@@ -202,7 +220,20 @@ router.post(
   validateRequest,
   async (req: Request<{}, {}, RegisterRequest>, res: Response): Promise<Response> => {
     try {
-      const { username, password, type, specialty } = req.body;
+      const {
+        username,
+        password,
+        type,
+        specialty,
+        education,
+        qualification,
+        description,
+        siteUrl,
+        phone,
+        email,
+        location,
+        languages,
+      } = req.body;
 
       // Check if username already exists
       const existingUser = await prisma.user.findUnique({
@@ -211,6 +242,17 @@ router.post(
 
       if (existingUser) {
         return res.status(400).json({ error: 'Username already exists' });
+      }
+
+      // Check if email exists (for doctors)
+      if (type === 'doctor' && email) {
+        const existingDoctor = await prisma.doctor.findFirst({
+          where: { email },
+        });
+
+        if (existingDoctor) {
+          return res.status(400).json({ error: 'Email already registered' });
+        }
       }
 
       // Hash password
@@ -226,20 +268,24 @@ router.post(
       });
 
       // If user is a doctor, create doctor profile
-      if (type === 'doctor' && specialty) {
+      if (type === 'doctor') {
         await prisma.doctor.create({
           data: {
             userId: user.id,
-            specialty,
+            specialty: specialty!,
+            education: education!,
+            qualification: qualification!,
+            description: description!,
+            siteUrl,
+            phone: phone!,
+            email: email!,
+            location: location!,
+            languages: languages!,
           },
         });
       }
 
-      const token = jwt.sign(
-        { userId: user.id, type: user.type },
-        process.env.JWT_SECRET!,
-        { expiresIn: '24h' }
-      );
+      const token = jwt.sign({ userId: user.id, type: user.type }, process.env.JWT_SECRET!, { expiresIn: '24h' });
 
       return res.status(201).json({
         token,
@@ -250,9 +296,10 @@ router.post(
         },
       });
     } catch (error) {
+      console.error('Registration error:', error);
       return res.status(500).json({ error: 'Registration failed' });
     }
   }
 );
 
-export default router; 
+export default router;

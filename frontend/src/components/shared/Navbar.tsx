@@ -1,17 +1,11 @@
-import React from "react";
-import {
-  AppBar,
-  Box,
-  Toolbar,
-  Typography,
-  Button,
-  IconButton,
-} from "@mui/material";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../contexts/shared/AuthContext";
-import EventIcon from "@mui/icons-material/Event";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import LogoutIcon from "@mui/icons-material/Logout";
+import React from 'react';
+import { AppBar, Box, Toolbar, Typography, Button, IconButton } from '@mui/material';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/shared/AuthContext';
+import EventIcon from '@mui/icons-material/Event';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -19,29 +13,24 @@ const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate('/login');
   };
 
   return (
     <AppBar position="static" sx={{ mb: 4 }}>
       <Toolbar>
-        <Typography
-          variant="h6"
-          component={Link}
-          to="/"
-          sx={{ flexGrow: 1, textDecoration: "none", color: "inherit" }}
-        >
+        <Typography variant="h6" component={Link} to="/" sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}>
           Medical Scheduler
         </Typography>
 
         {isAuthenticated && user ? (
           <>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography variant="body1" sx={{ mr: 2 }}>
                 Welcome, {user.username}
               </Typography>
 
-              {user.type === "patient" ? (
+              {user.type === 'patient' ? (
                 <>
                   <Button
                     color="inherit"
@@ -67,6 +56,15 @@ const Navbar: React.FC = () => {
                   <Button
                     color="inherit"
                     component={Link}
+                    to="/doctor/profile"
+                    startIcon={<AccountCircleIcon />}
+                    sx={{ textTransform: 'none', mr: 1 }}
+                  >
+                    Profile
+                  </Button>
+                  <Button
+                    color="inherit"
+                    component={Link}
                     to="/doctor/schedule"
                     startIcon={<CalendarMonthIcon />}
                     sx={{ mr: 1 }}
@@ -85,11 +83,7 @@ const Navbar: React.FC = () => {
                 </>
               )}
 
-              <IconButton
-                color="inherit"
-                onClick={handleLogout}
-                aria-label="logout"
-              >
+              <IconButton color="inherit" onClick={handleLogout} aria-label="logout">
                 <LogoutIcon />
               </IconButton>
             </Box>
@@ -99,12 +93,7 @@ const Navbar: React.FC = () => {
             <Button color="inherit" component={Link} to="/login" sx={{ mr: 1 }}>
               Login
             </Button>
-            <Button
-              color="inherit"
-              component={Link}
-              to="/register"
-              variant="outlined"
-            >
+            <Button color="inherit" component={Link} to="/register" variant="outlined">
               Register
             </Button>
           </Box>

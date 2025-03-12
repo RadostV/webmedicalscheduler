@@ -1,6 +1,7 @@
 import api from '../../config/api.config';
 import { Appointment, AppointmentStatus } from '../../types/shared/appointment.types';
 import { Availability, AvailabilityRequest } from '../../types/doctor';
+import { DoctorProfile } from '../../types/shared/auth.types';
 import axios from 'axios';
 
 export const doctorService = {
@@ -46,5 +47,22 @@ export const doctorService = {
       console.error('Error in updateAppointmentStatus:', error);
       throw error;
     }
-  }
-}; 
+  },
+
+  async updateProfile(profileData: Partial<DoctorProfile>): Promise<DoctorProfile> {
+    const response = await api.patch<DoctorProfile>('/doctors/profile', profileData);
+    return response.data;
+  },
+
+  async uploadPhoto(photo: File): Promise<DoctorProfile> {
+    const formData = new FormData();
+    formData.append('photo', photo);
+
+    const response = await api.post<DoctorProfile>('/doctors/profile/photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+};

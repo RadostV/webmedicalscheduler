@@ -10,6 +10,14 @@ interface ApiResponse {
     doctorProfile?: {
       id: number;
       specialty: string;
+      education: string;
+      qualification: string;
+      description: string;
+      siteUrl?: string;
+      phone: string;
+      email: string;
+      location: string;
+      languages: string;
     };
   };
 }
@@ -19,6 +27,14 @@ interface RegisterRequest {
   password: string;
   type: 'patient' | 'doctor';
   specialty?: string;
+  education?: string;
+  qualification?: string;
+  description?: string;
+  siteUrl?: string;
+  phone?: string;
+  email?: string;
+  location?: string;
+  languages?: string;
 }
 
 const convertUser = (apiUser: ApiResponse['user']): User => ({
@@ -57,7 +73,7 @@ export const authService = {
   getCurrentUser(): User | null {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
-    
+
     const user = JSON.parse(userStr);
     return convertUser(user);
   },
@@ -65,5 +81,5 @@ export const authService = {
   setAuthData(token: string, user: User): void {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-  }
-}; 
+  },
+};
