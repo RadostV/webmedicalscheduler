@@ -44,8 +44,8 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -71,9 +71,9 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Router>
-        <ToastContainer position="bottom-right" autoClose={5000} />
-      </AuthProvider>
+          <ToastContainer position="bottom-right" autoClose={5000} />
+        </AuthProvider>
+      </Router>
     </ThemeProvider>
   );
 };

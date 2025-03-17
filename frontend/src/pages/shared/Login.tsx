@@ -23,6 +23,15 @@ const Login: React.FC = () => {
   const location = useLocation();
   const [loginError, setLoginError] = useState<string | null>(null);
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   // If user is already authenticated, redirect to appropriate page
   if (isAuthenticated && user) {
     const from =

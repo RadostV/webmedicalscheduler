@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -30,10 +30,12 @@ import { Availability } from '../../types/doctor';
 
 const AppointmentScheduler: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preSelectedDoctor = location.state?.selectedDoctor;
 
   // State
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctor, setSelectedDoctor] = useState<string>('');
+  const [selectedDoctor, setSelectedDoctor] = useState<string>(preSelectedDoctor?.userId || '');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [symptoms, setSymptoms] = useState<string>('');
@@ -121,6 +123,20 @@ const AppointmentScheduler: React.FC = () => {
       try {
         const doctorsList = await patientService.getDoctors();
         setDoctors(doctorsList);
+
+        // If we have a pre-selected doctor but it's not in the list, add it
+        if (preSelectedDoctor && !doctorsList.find((d) => d.userId === preSelectedDoctor.userId)) {
+          setDoctors((prev) => [
+            ...prev,
+            {
+              id: preSelectedDoctor.id,
+              userId: preSelectedDoctor.userId,
+              name: preSelectedDoctor.name,
+              specialty: preSelectedDoctor.specialty,
+            },
+          ]);
+        }
+
         setError(null);
       } catch (err) {
         setError('Failed to fetch doctors. Please try again later.');
@@ -131,7 +147,7 @@ const AppointmentScheduler: React.FC = () => {
     };
 
     fetchDoctors();
-  }, []);
+  }, [preSelectedDoctor]);
 
   // Fetch doctor's availability when selected
   useEffect(() => {
