@@ -7,6 +7,8 @@ export interface LoginRequest {
 
 export interface DoctorProfile {
   id: string;
+  userId: string;
+  name: string;
   specialty: string;
   education: string;
   qualification: string;

@@ -4,6 +4,8 @@ import { Container } from '@mui/material';
 import Navbar from '../../components/shared/Navbar';
 import AppointmentList from './AppointmentList';
 import AppointmentScheduler from './AppointmentScheduler';
+import SearchDoctors from './SearchDoctors';
+import DoctorProfile from './DoctorProfile';
 import ProtectedRoute from '../../components/shared/ProtectedRoute';
 
 const PatientPortal: React.FC = () => {
@@ -25,6 +27,30 @@ const PatientPortal: React.FC = () => {
             element={
               <ProtectedRoute requiredRole="patient">
                 <AppointmentScheduler />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="search-doctors"
+            element={
+              <ProtectedRoute requiredRole="patient">
+                <SearchDoctors />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="doctors/:doctorId"
+            element={
+              <ProtectedRoute requiredRole="patient">
+                <DoctorProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile"
+            element={
+              <ProtectedRoute requiredRole="patient">
+                <Navigate to="/patient/appointments" replace />
               </ProtectedRoute>
             }
           />

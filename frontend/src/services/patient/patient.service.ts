@@ -9,8 +9,23 @@ export interface TimeSlot {
 
 export const patientService = {
   async getAppointments(): Promise<Appointment[]> {
-    const response = await api.get<Appointment[]>('/api/patients/appointments');
-    return response.data;
+    const response = await api.get<any[]>('/api/patients/appointments');
+    return response.data.map((appointment) => ({
+      id: appointment.id.toString(),
+      patientId: appointment.patientId.toString(),
+      doctorId: appointment.doctorId.toString(),
+      dateTime: appointment.dateTime,
+      status: appointment.status,
+      consultationAnalysis: appointment.consultationAnalysis || '',
+      description: appointment.description || '',
+      hasPrescription: appointment.prescriptionFile != null,
+      doctor: {
+        id: appointment.doctor?.id.toString() || '',
+        userId: appointment.doctor?.userId.toString() || '',
+        name: appointment.doctor?.name || 'Unknown Doctor',
+        specialty: appointment.doctor?.specialty || '',
+      },
+    }));
   },
 
   async scheduleAppointment(formData: FormData): Promise<Appointment> {

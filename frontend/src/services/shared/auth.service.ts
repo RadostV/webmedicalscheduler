@@ -38,12 +38,23 @@ interface RegisterRequest {
 }
 
 const convertUser = (apiUser: ApiResponse['user']): User => ({
-  ...apiUser,
   id: apiUser.id.toString(),
+  username: apiUser.username,
+  type: apiUser.type,
   doctorProfile: apiUser.doctorProfile
     ? {
-        ...apiUser.doctorProfile,
         id: apiUser.doctorProfile.id.toString(),
+        userId: apiUser.id.toString(),
+        name: apiUser.username,
+        specialty: apiUser.doctorProfile.specialty,
+        education: apiUser.doctorProfile.education,
+        qualification: apiUser.doctorProfile.qualification,
+        description: apiUser.doctorProfile.description,
+        siteUrl: apiUser.doctorProfile.siteUrl,
+        phone: apiUser.doctorProfile.phone,
+        email: apiUser.doctorProfile.email,
+        location: apiUser.doctorProfile.location,
+        languages: apiUser.doctorProfile.languages,
       }
     : undefined,
 });
@@ -51,31 +62,53 @@ const convertUser = (apiUser: ApiResponse['user']): User => ({
 export const authService = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     const response = await api.post<ApiResponse>('/api/auth/login', credentials);
+    const { token, user } = response.data;
+
+    // Set the token in axios defaults
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
     return {
-      token: response.data.token,
-      user: convertUser(response.data.user),
+      token,
+      user: convertUser(user),
     };
   },
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const response = await api.post<ApiResponse>('/api/auth/register', data);
+    const { token, user } = response.data;
+
+    // Set the token in axios defaults
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
     return {
-      token: response.data.token,
-      user: convertUser(response.data.user),
+      token,
+      user: convertUser(user),
     };
   },
 
   logout(): void {
+    // Remove token from axios defaults
+    delete api.defaults.headers.common['Authorization'];
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
 
   getCurrentUser(): User | null {
+    const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
-    if (!userStr) return null;
 
-    const user = JSON.parse(userStr);
-    return convertUser(user);
+    if (!token || !userStr) {
+      this.logout(); // Clean up if either token or user is missing
+      return null;
+    }
+
+    try {
+      const user = JSON.parse(userStr);
+      return convertUser(user);
+    } catch (error) {
+      this.logout(); // Clean up if user data is invalid
+      return null;
+    }
   },
 
   setAuthData(token: string, user: User): void {

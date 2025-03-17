@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthState, User, LoginRequest, AuthResponse } from '../../types/shared/auth.types';
 import api from '../../config/api.config';
 import { authService } from '../../services/shared/auth.service';
+import { Box, CircularProgress } from '@mui/material';
 
 interface RegisterRequest {
   username: string;
@@ -66,7 +68,11 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       };
     case 'LOGOUT':
       return {
-        ...initialState,
+        isAuthenticated: false,
+        user: null,
+        token: null,
+        loading: false,
+        error: null,
       };
     default:
       return state;
@@ -76,16 +82,50 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 // Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const [initialized, setInitialized] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: { user: currentUser, token: localStorage.getItem('token') || '' },
-      });
-    }
+    const initializeAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const currentUser = authService.getCurrentUser();
+
+        if (token && currentUser) {
+          // Set the token in the API configuration
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+          dispatch({
+            type: 'LOGIN_SUCCESS',
+            payload: { user: currentUser, token },
+          });
+        } else {
+          // Clear any stale data
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          dispatch({ type: 'LOGIN_FAILURE', payload: '' });
+        }
+      } catch (error) {
+        // Clear any invalid data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        dispatch({ type: 'LOGIN_FAILURE', payload: '' });
+      } finally {
+        setInitialized(true);
+      }
+    };
+
+    initializeAuth();
   }, []);
+
+  // Don't render children until auth is initialized
+  if (!initialized) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   // Login function
   const login = async (credentials: LoginRequest): Promise<void> => {
@@ -97,14 +137,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user: User;
       }>('/api/auth/login', credentials);
 
+      const { token, user } = response.data;
+
+      // Set the token in the API configuration
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
       // Store token and user in local storage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
 
       // Update state
       dispatch({
         type: 'LOGIN_SUCCESS',
-        payload: { user: response.data.user, token: response.data.token },
+        payload: { user, token },
       });
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Failed to login';
@@ -112,16 +157,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         type: 'LOGIN_FAILURE',
         payload: errorMessage,
       });
-      // Don't throw the error, just return to prevent page reload
       return;
     }
   };
 
   // Logout function
   const logout = (): void => {
+    // Remove token from API configuration
+    delete api.defaults.headers.common['Authorization'];
+
+    // Clear local storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+
+    // Update state
     dispatch({ type: 'LOGOUT' });
+
+    // Redirect to login page
+    navigate('/login', { replace: true });
   };
 
   // Register function

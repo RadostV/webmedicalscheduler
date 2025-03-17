@@ -4,6 +4,17 @@ import { Availability, AvailabilityRequest } from '../../types/doctor';
 import { DoctorProfile } from '../../types/shared/auth.types';
 import axios from 'axios';
 
+interface SearchDoctorsFilters {
+  specialty?: string;
+  education?: string;
+  qualification?: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  location?: string;
+  languages?: string;
+}
+
 export const doctorService = {
   async getAppointments(): Promise<Appointment[]> {
     const response = await api.get<any[]>('/api/doctors/appointments');
@@ -84,6 +95,29 @@ export const doctorService = {
     return response.data;
   },
 
+  async getDoctorProfile(doctorId: string): Promise<DoctorProfile> {
+    try {
+      console.log('Fetching doctor profile for ID:', doctorId);
+      const response = await api.get<DoctorProfile[]>('/api/doctors');
+      const doctor = response.data.find((d) => d.id === doctorId);
+
+      if (!doctor) {
+        throw new Error('Doctor not found');
+      }
+
+      console.log('Doctor profile found:', doctor);
+      return doctor;
+    } catch (error) {
+      console.error('Error fetching doctor profile:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Response status:', error.response?.status);
+        console.error('Response data:', error.response?.data);
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw error;
+    }
+  },
+
   async completeAppointment(appointmentId: string, formData: FormData): Promise<Appointment> {
     const response = await api.patch<Appointment>(`/api/doctors/appointments/${appointmentId}/complete`, formData, {
       headers: {
@@ -91,5 +125,36 @@ export const doctorService = {
       },
     });
     return response.data;
+  },
+
+  async searchDoctors(filters: SearchDoctorsFilters): Promise<DoctorProfile[]> {
+    const response = await api.get<DoctorProfile[]>('/api/doctors');
+    return response.data.filter((doctor) => {
+      const matchesSpecialty =
+        !filters.specialty || doctor.specialty.toLowerCase().includes(filters.specialty.toLowerCase());
+      const matchesEducation =
+        !filters.education || doctor.education?.toLowerCase().includes(filters.education.toLowerCase());
+      const matchesQualification =
+        !filters.qualification || doctor.qualification?.toLowerCase().includes(filters.qualification.toLowerCase());
+      const matchesDescription =
+        !filters.description || doctor.description?.toLowerCase().includes(filters.description.toLowerCase());
+      const matchesPhone = !filters.phone || doctor.phone?.toLowerCase().includes(filters.phone.toLowerCase());
+      const matchesEmail = !filters.email || doctor.email?.toLowerCase().includes(filters.email.toLowerCase());
+      const matchesLocation =
+        !filters.location || doctor.location?.toLowerCase().includes(filters.location.toLowerCase());
+      const matchesLanguages =
+        !filters.languages || doctor.languages?.toLowerCase().includes(filters.languages.toLowerCase());
+
+      return (
+        matchesSpecialty &&
+        matchesEducation &&
+        matchesQualification &&
+        matchesDescription &&
+        matchesPhone &&
+        matchesEmail &&
+        matchesLocation &&
+        matchesLanguages
+      );
+    });
   },
 };
