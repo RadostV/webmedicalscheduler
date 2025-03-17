@@ -270,6 +270,11 @@ const SearchDoctors: React.FC = () => {
                 <Typography variant="body2" color="textSecondary">
                   {doctor.location}
                 </Typography>
+                {doctor.description && (
+                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                    {doctor.description}
+                  </Typography>
+                )}
               </CardContent>
               <CardActions>
                 <Button size="small" color="primary" onClick={() => handleViewProfile(doctor)}>
