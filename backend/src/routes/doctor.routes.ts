@@ -197,12 +197,21 @@ router.get('/', async (_req: Request, res: Response): Promise<Response> => {
       },
     });
 
-    // Transform the response to match the frontend Doctor type
+    // Transform the response to include all profile fields
     const formattedDoctors = doctors.map((doctor) => ({
       id: doctor.id.toString(),
       userId: doctor.userId.toString(),
-      specialty: doctor.specialty,
       name: doctor.user.username,
+      specialty: doctor.specialty,
+      education: doctor.education,
+      qualification: doctor.qualification,
+      description: doctor.description,
+      siteUrl: doctor.siteUrl,
+      phone: doctor.phone,
+      email: doctor.email,
+      location: doctor.location,
+      languages: doctor.languages,
+      photoUrl: doctor.photo ? `/api/doctors/profile/photo/${doctor.id}` : null,
     }));
 
     return res.json(formattedDoctors);
