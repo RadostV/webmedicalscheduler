@@ -4,7 +4,7 @@ import { Container } from '@mui/material';
 import Navbar from '../../components/shared/Navbar';
 import Schedule from './Schedule';
 import AvailabilityManager from './AvailabilityManager';
-import ProfileEditor from '../../components/doctor/ProfileEditor';
+import DoctorProfileEditor from '../../components/doctor/DoctorProfileEditor';
 import ProtectedRoute from '../../components/shared/ProtectedRoute';
 
 const DoctorPortal: React.FC = () => {
@@ -33,7 +33,7 @@ const DoctorPortal: React.FC = () => {
             path="profile"
             element={
               <ProtectedRoute requiredRole="doctor">
-                <ProfileEditor />
+                <DoctorProfileEditor />
               </ProtectedRoute>
             }
           />

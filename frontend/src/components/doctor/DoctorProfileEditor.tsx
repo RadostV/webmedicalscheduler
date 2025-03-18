@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   TextField,
@@ -15,9 +16,16 @@ import { useAuth } from '../../contexts/shared/AuthContext';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { DoctorProfile } from '../../types/shared/auth.types';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { API_BASE_URL } from '../../config/api.config';
 
-const ProfileEditor: React.FC = () => {
+interface DoctorProfileEditorProps {
+  readOnly?: boolean;
+  doctorId?: string;
+}
+
+const DoctorProfileEditor: React.FC<DoctorProfileEditorProps> = ({ readOnly = false, doctorId }) => {
+  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -43,7 +51,19 @@ const ProfileEditor: React.FC = () => {
     const loadProfile = async () => {
       try {
         setIsLoading(true);
-        const fetchedProfile = await doctorService.getProfile();
+        setError(null);
+        let fetchedProfile;
+
+        if (readOnly && doctorId) {
+          // If in read-only mode and doctorId provided, fetch that specific doctor's profile
+          fetchedProfile = await doctorService.getDoctorProfile(doctorId);
+        } else if (!readOnly && !doctorId && user?.doctorProfile) {
+          // If in edit mode and no doctorId, use the logged-in doctor's profile from context
+          fetchedProfile = await doctorService.getDoctorProfile(user.doctorProfile.userId);
+        } else {
+          throw new Error('Invalid component configuration');
+        }
+
         setProfile(fetchedProfile);
         setFormData({
           specialty: fetchedProfile.specialty || '',
@@ -58,18 +78,14 @@ const ProfileEditor: React.FC = () => {
         });
       } catch (err: any) {
         console.error('Error loading profile:', err);
-        if (err.response?.status === 401 || err.response?.data?.error === 'No token provided') {
-          setError('You have been logged out. Please log in again.');
-        } else {
-          setError(err.response?.data?.error || 'Failed to load profile');
-        }
+        setError(err.message || 'Failed to load profile');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadProfile();
-  }, []); // Empty dependency array - only run once on mount
+  }, [doctorId, readOnly, user?.doctorProfile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -140,6 +156,10 @@ const ProfileEditor: React.FC = () => {
     }
   };
 
+  const handleBack = () => {
+    navigate('/patient/search-doctors');
+  };
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -150,35 +170,44 @@ const ProfileEditor: React.FC = () => {
 
   return (
     <Paper elevation={3} sx={{ p: 4, maxWidth: 800, mx: 'auto', mt: 4 }}>
+      {readOnly && (
+        <Box sx={{ mb: 2 }}>
+          <Button startIcon={<ArrowBackIcon />} onClick={handleBack} variant="text" sx={{ ml: -1 }}>
+            Back to Search Results
+          </Button>
+        </Box>
+      )}
+
+      {profile && profile.name && (
+        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 3 }}>
+          {profile.name}
+        </Typography>
+      )}
+
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        {profile?.photoUrl && (
+        {profile?.photoUrl ? (
           <Box sx={{ position: 'relative' }}>
             <Avatar
-              src={profile?.photoUrl ? `${API_BASE_URL}${profile.photoUrl}` : ''}
-              alt={user?.username || ''}
+              src={profile.photoUrl.startsWith('http') ? profile.photoUrl : `${API_BASE_URL}${profile.photoUrl}`}
+              alt={profile?.name || ''}
               sx={{
                 width: 100,
                 height: 100,
                 mr: 2,
                 bgcolor: 'primary.main',
               }}
-              key={profile?.photoUrl}
               imgProps={{
                 onError: (e) => {
-                  console.error(
-                    'Error loading image. URL:',
-                    profile?.photoUrl ? `${API_BASE_URL}${profile.photoUrl}` : ''
-                  );
+                  console.error('Failed to load image:', profile.photoUrl);
                   const imgElement = e.target as HTMLImageElement;
                   imgElement.src = ''; // Clear the src to show the fallback
                 },
               }}
             >
-              {user?.username?.charAt(0).toUpperCase()}
+              {profile?.name?.charAt(0).toUpperCase()}
             </Avatar>
           </Box>
-        )}
-        {!profile?.photoUrl && (
+        ) : (
           <Avatar
             sx={{
               width: 100,
@@ -187,26 +216,24 @@ const ProfileEditor: React.FC = () => {
               bgcolor: 'primary.main',
             }}
           >
-            {user?.username?.charAt(0).toUpperCase()}
+            {profile?.name?.charAt(0).toUpperCase() || '?'}
           </Avatar>
         )}
-        <Box>
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-            accept="image/*"
-            onChange={handlePhotoChange}
-          />
-          <Button variant="contained" startIcon={<PhotoCamera />} onClick={handlePhotoClick} disabled={isSubmitting}>
-            {profile?.photoUrl ? 'Change Photo' : 'Upload Photo'}
-          </Button>
-        </Box>
+        {!readOnly && (
+          <Box>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept="image/*"
+              onChange={handlePhotoChange}
+            />
+            <Button variant="contained" startIcon={<PhotoCamera />} onClick={handlePhotoClick} disabled={isSubmitting}>
+              {profile?.photoUrl ? 'Change Photo' : 'Upload Photo'}
+            </Button>
+          </Box>
+        )}
       </Box>
-
-      <Typography variant="h5" component="h1" gutterBottom>
-        Edit Profile
-      </Typography>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -230,7 +257,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.specialty}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
             />
           </Grid>
@@ -243,7 +270,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.education}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
             />
           </Grid>
@@ -256,7 +283,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.qualification}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
             />
           </Grid>
@@ -271,7 +298,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.description}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
               placeholder="Describe your professional experience, expertise, and approach to patient care"
             />
@@ -285,7 +312,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.phone}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
             />
           </Grid>
@@ -299,7 +326,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
             />
           </Grid>
@@ -312,7 +339,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.location}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
             />
           </Grid>
@@ -325,7 +352,7 @@ const ProfileEditor: React.FC = () => {
               value={formData.languages}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
               required
               helperText="Enter languages separated by commas"
             />
@@ -339,19 +366,21 @@ const ProfileEditor: React.FC = () => {
               value={formData.siteUrl}
               onChange={handleChange}
               margin="normal"
-              disabled={isSubmitting}
+              disabled={isSubmitting || readOnly}
             />
           </Grid>
         </Grid>
 
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </Box>
+        {!readOnly && (
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </Box>
+        )}
       </form>
     </Paper>
   );
 };
 
-export default ProfileEditor;
+export default DoctorProfileEditor;
