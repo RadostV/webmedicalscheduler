@@ -1,8 +1,9 @@
 import api from '../../config/api.config';
-import { Appointment, AppointmentStatus } from '../../types/shared/appointment.types';
+import { AppointmentStatus } from '../../types/shared/appointment.types';
 import { Availability, AvailabilityRequest } from '../../types/doctor';
 import { DoctorProfile } from '../../types/shared/auth.types';
 import axios from 'axios';
+import { appointmentService } from '../shared/appointment.service';
 
 interface SearchDoctorsFilters {
   specialty?: string;
@@ -16,26 +17,7 @@ interface SearchDoctorsFilters {
 }
 
 export const doctorService = {
-  async getAppointments(): Promise<Appointment[]> {
-    const response = await api.get<any[]>('/api/doctors/appointments');
-    return response.data.map((appointment) => ({
-      id: appointment.id.toString(),
-      patientId: appointment.patientId.toString(),
-      doctorId: appointment.doctorId.toString(),
-      dateTime: appointment.dateTime,
-      status: appointment.status,
-      consultationAnalysis: appointment.consultationAnalysis || '',
-      description: appointment.description || '',
-      hasPrescription: appointment.prescriptionFile != null,
-      patientName: appointment.patient?.username || 'Unknown Patient',
-      doctor: {
-        id: appointment.doctorId.toString(),
-        userId: appointment.doctorId.toString(),
-        name: appointment.doctorName || 'Unknown Doctor',
-        specialty: appointment.specialty || '',
-      },
-    }));
-  },
+  getAppointments: () => appointmentService.getAppointments('doctor'),
 
   async getAvailability(): Promise<Availability[]> {
     const response = await api.get<Availability[]>('/api/doctors/availability');
@@ -63,10 +45,8 @@ export const doctorService = {
     await api.delete(`/api/doctors/availability/${availabilityId}`);
   },
 
-  async updateAppointmentStatus(appointmentId: string, status: AppointmentStatus): Promise<Appointment> {
-    const response = await api.patch<Appointment>(`/api/doctors/appointments/${appointmentId}/status`, { status });
-    return response.data;
-  },
+  updateAppointmentStatus: appointmentService.updateAppointmentStatus,
+  completeAppointment: appointmentService.completeAppointment,
 
   async updateProfile(profileData: Partial<DoctorProfile>): Promise<DoctorProfile> {
     const response = await api.patch<DoctorProfile>('/api/doctors/profile', profileData);
@@ -77,17 +57,28 @@ export const doctorService = {
     const formData = new FormData();
     formData.append('photo', photo);
 
-    const response = await api.post('/api/doctors/profile/photo', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    try {
+      const response = await api.post<{ photoUrl: string }>('/api/doctors/profile/photo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-    const currentProfile = await this.getProfile();
-    return {
-      ...currentProfile,
-      photoUrl: response.data.doctor.photoUrl,
-    };
+      console.log('Photo upload response:', response.data);
+
+      // Get the current profile and update it with the new photo URL
+      const currentProfile = await this.getProfile();
+      const updatedProfile = {
+        ...currentProfile,
+        photoUrl: response.data.photoUrl,
+      };
+
+      console.log('Updated profile with new photo:', updatedProfile);
+      return updatedProfile;
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      throw error;
+    }
   },
 
   async getProfile(): Promise<DoctorProfile> {
@@ -116,15 +107,6 @@ export const doctorService = {
       }
       throw error;
     }
-  },
-
-  async completeAppointment(appointmentId: string, formData: FormData): Promise<Appointment> {
-    const response = await api.patch<Appointment>(`/api/doctors/appointments/${appointmentId}/complete`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
   },
 
   async searchDoctors(filters: SearchDoctorsFilters): Promise<DoctorProfile[]> {
