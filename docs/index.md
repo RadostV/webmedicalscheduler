@@ -1,49 +1,49 @@
-# Medical Appointment System
+# Система за Медицински Прегледи
 
-Welcome to the Medical Appointment System documentation. This comprehensive documentation covers both the frontend and backend APIs of our system, designed to streamline appointment scheduling between doctors and patients.
+Добре дошли в документацията на Системата за Медицински Прегледи. Тази подробна документация покрива както frontend, така и backend API на нашата система, проектирана за оптимизиране на процеса на записване за прегледи между лекари и пациенти.
 
-## System Overview
+## Системен Преглед
 
-The Medical Appointment System is a full-stack application that enables efficient management of doctor appointments, schedule tracking, and patient bookings. It features role-based access for different user types and a real-time appointment scheduling system.
+Системата за Медицински Прегледи е пълноценно приложение, което позволява ефективно управление на прегледите при лекари, проследяване на графика и записване на пациенти. Тя включва достъп базиран на роли за различни типове потребители и система за планиране на прегледи в реално време.
 
 ```mermaid
 graph TD
-    A[Patient] -->|Books appointment| B[Appointment System]
-    C[Doctor] -->|Sets availability| B
-    B -->|Shows available slots| A
-    B -->|Shows appointments| C
-    C -->|Updates appointment status| B
-    B -->|Notifies| A
+    A[Пациент] -->|Записва се за преглед| B[Система за Прегледи]
+    C[Лекар] -->|Задава наличност| B
+    B -->|Показва свободни часове| A
+    B -->|Показва прегледи| C
+    C -->|Актуализира статус на преглед| B
+    B -->|Известява| A
 ```
 
-## Key Features
+## Основни Функционалности
 
-- **User Authentication**: Secure login and registration system for patients and doctors
-- **Appointment Scheduling**: Patients can schedule appointments with available doctors
-- **Doctor Availability Management**: Doctors can set and manage their availability
-- **Appointment Status Tracking**: Track appointments as scheduled, completed, or cancelled
-- **Calendar Integration**: Visual calendar interface for appointment management
+- **Автентикация на Потребители**: Сигурна система за вход и регистрация за пациенти и лекари
+- **Планиране на Прегледи**: Пациентите могат да записват прегледи при налични лекари
+- **Управление на Наличността на Лекарите**: Лекарите могат да задават и управляват своята наличност
+- **Проследяване на Статуса на Прегледите**: Следене на прегледите като записани, завършени или отменени
+- **Интеграция с Календар**: Визуален календарен интерфейс за управление на прегледите
 
-## Documentation Structure
+## Структура на Документацията
 
-This documentation is structured as follows:
+Тази документация е организирана по следния начин:
 
-- **Getting Started**: Installation instructions and architecture overview
-- **Backend API**: Detailed documentation of backend REST API endpoints
-- **Frontend API**: Documentation of frontend service interfaces
-- **User Guides**: Comprehensive guides for system usage
+- **Начало на Работата**: Инструкции за инсталиране и преглед на архитектурата
+- **Backend API**: Подробна документация на backend REST API endpoints
+- **Frontend API**: Документация на frontend service интерфейсите
+- **Ръководства за Потребители**: Изчерпателни ръководства за използване на системата
 
-## Technical Stack
+## Технически Стек
 
 - **Frontend**: React, Material UI, TypeScript
 - **Backend**: Node.js, Express, TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT-based authentication
+- **База Данни**: PostgreSQL с Prisma ORM
+- **Автентикация**: JWT базирана автентикация
 
-## Quick Links
+## Бързи Връзки
 
-- [Installation Guide](guides/installation.md)
-- [Backend API Overview](api/backend/index.md)
-- [Frontend API Overview](api/frontend/index.md)
-- [User Guide](guides/user-guide.md)
-- [Developer Guide](guides/developer-guide.md)
+- [Ръководство за Инсталиране](guides/installation.md)
+- [Преглед на Backend API](api/backend/index.md)
+- [Преглед на Frontend API](api/frontend/index.md)
+- [Ръководство за Потребители](guides/user-guide.md)
+- [Ръководство за Разработчици](guides/developer-guide.md) 

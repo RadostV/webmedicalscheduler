@@ -1,0 +1,33 @@
+please create full source code documentation, written on markdown and diagrames to be created with mermaid. 
+To be creatted in folder docs in singal docx file. use bulgarian language
+table of content to include:
+System Overview
+
+Key Features¶
+User Authentication: Secure login and registration system for patients and doctors
+Appointment Scheduling: Patients can schedule appointments with available doctors
+Doctor Availability Management: Doctors can set and manage their availability
+Appointment Status Tracking: Track appointments as scheduled, completed, or cancelled
+Calendar Integration: Visual calendar interface for appointment management
+
+Documentation Structure¶
+This documentation is structured as follows:
+
+Getting Started: Installation instructions and architecture overview
+Backend API: Detailed documentation of backend REST API endpoints
+Frontend API: Documentation of frontend service interfaces
+User Guides: Comprehensive guides for system usage
+
+Technical Stack¶
+Frontend: React, Material UI, TypeScript
+Backend: Node.js, Express, TypeScript
+Database: PostgreSQL with Prisma ORM
+Authentication: JWT-based authentication
+
+Quick Links¶
+Installation Guide
+Backend API Overview
+Frontend API Overview
+User Guide
+Developer Guide
+

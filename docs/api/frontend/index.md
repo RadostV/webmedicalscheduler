@@ -1,134 +1,275 @@
-# Frontend API Documentation
+# Frontend API Документация
 
-This section documents the frontend service APIs for the Medical Appointment System.
+## Общ Преглед
 
-## API Overview
+Този документ описва API интерфейсите, използвани във frontend частта на Системата за Медицински Прегледи. API-то е изградено с TypeScript и Axios за HTTP заявки.
 
-The frontend services provide structured interfaces for:
+## Автентикация
 
-- Authentication services (login, registration, user management)
-- Doctor services (appointment management, availability management)
-- Patient services (appointment booking, doctor discovery)
-
-## Service Architecture
-
-```mermaid
-graph TD
-    A[Frontend Services] --> B[Auth Service]
-    A --> C[Doctor Service]
-    A --> D[Patient Service]
-
-    B -->|Manages| B1[User Sessions]
-    B -->|Handles| B2[Authentication]
-
-    C -->|Manages| C1[Doctor Appointments]
-    C -->|Controls| C2[Availability]
-
-    D -->|Books| D1[Appointments]
-    D -->|Browses| D2[Doctors]
-
-    B1 --> E[Local Storage]
-    B2 --> F[API Calls]
-    C1 --> F
-    C2 --> F
-    D1 --> F
-    D2 --> F
-
-    F -->|HTTP Requests| G[Backend API]
-```
-
-## Service Structure
-
-The frontend services are organized into three main categories:
-
-1. **Authentication Service**: Handles user authentication and session management
-2. **Doctor Service**: Manages doctor-specific functionalities
-3. **Patient Service**: Handles patient-specific functionalities
-
-## Service Interfaces
-
-### Authentication Service
-
-Detailed documentation: [Auth Service](auth.md)
-
+### Интерфейси
 ```typescript
-interface authService {
-  login(credentials: LoginRequest): Promise<AuthResponse>;
-  register(data: RegisterRequest): Promise<AuthResponse>;
-  logout(): void;
-  getCurrentUser(): User | null;
-  setAuthData(token: string, user: User): void;
+interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+interface RegisterData {
+  username: string;
+  password: string;
+  email: string;
+  type: 'patient' | 'doctor';
+  name: string;
+}
+
+interface AuthResponse {
+  token: string;
+  user: {
+    id: number;
+    username: string;
+    type: string;
+  };
 }
 ```
 
-### Doctor Service
-
-Detailed documentation: [Doctor Service](doctor.md)
-
+### Функции
 ```typescript
-interface doctorService {
-  getAppointments(): Promise<Appointment[]>;
-  getAvailability(): Promise<Availability[]>;
-  getDoctorAvailability(doctorId: string): Promise<Availability[]>;
-  setAvailability(availabilityData: AvailabilityRequest): Promise<Availability>;
-  deleteAvailability(availabilityId: string): Promise<void>;
-  updateAppointmentStatus(
-    appointmentId: string,
-    status: AppointmentStatus
-  ): Promise<Appointment>;
+const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+  const response = await axios.post('/api/auth/login', credentials);
+  return response.data;
+};
+
+const register = async (data: RegisterData): Promise<AuthResponse> => {
+  const response = await axios.post('/api/auth/register', data);
+  return response.data;
+};
+```
+
+## Лекарски API
+
+### Интерфейси
+```typescript
+interface Doctor {
+  id: number;
+  name: string;
+  specialty: string;
+  education: string;
+  qualifications: string;
+  contact_info: {
+    phone: string;
+    email: string;
+    address: string;
+  };
+  location: string;
+  languages: string[];
+  profile_photo_url: string;
+  description: string;
+}
+
+interface DoctorSearchParams {
+  specialty?: string;
+  location?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface DoctorSearchResponse {
+  doctors: Doctor[];
+  total: number;
+  page: number;
+  limit: number;
 }
 ```
 
-### Patient Service
-
-Detailed documentation: [Patient Service](patient.md)
-
+### Функции
 ```typescript
-interface patientService {
-  getAppointments(): Promise<Appointment[]>;
-  scheduleAppointment(
-    appointmentData: AppointmentRequest
-  ): Promise<Appointment>;
-  getDoctors(): Promise<Doctor[]>;
-  getDoctorSlots(doctorId: string, date: string): Promise<string[]>;
+const searchDoctors = async (params: DoctorSearchParams): Promise<DoctorSearchResponse> => {
+  const response = await axios.get('/api/doctors', { params });
+  return response.data;
+};
+
+const getDoctorDetails = async (id: number): Promise<Doctor> => {
+  const response = await axios.get(`/api/doctors/${id}`);
+  return response.data;
+};
+
+const updateDoctorProfile = async (id: number, data: Partial<Doctor>): Promise<Doctor> => {
+  const response = await axios.put(`/api/doctors/${id}`, data);
+  return response.data;
+};
+```
+
+## API за Наличност
+
+### Интерфейси
+```typescript
+interface TimeSlot {
+  start_time: string;
+  end_time: string;
+  is_available: boolean;
+}
+
+interface Availability {
+  id: number;
+  date: string;
+  time_slots: TimeSlot[];
+}
+
+interface AvailabilityParams {
+  start_date: string;
+  end_date: string;
 }
 ```
 
-## Error Handling
-
-All service methods that make API calls return Promises and should be used with proper error handling:
-
+### Функции
 ```typescript
-try {
-  const data = await someService.someMethod();
-  // Handle success
-} catch (error) {
-  // Handle error
-  console.error("Error:", error);
+const getAvailability = async (doctorId: number, params: AvailabilityParams): Promise<Availability[]> => {
+  const response = await axios.get(`/api/doctors/${doctorId}/availability`, { params });
+  return response.data;
+};
+
+const updateAvailability = async (doctorId: number, availability: Availability[]): Promise<void> => {
+  await axios.put(`/api/doctors/${doctorId}/availability`, { availability });
+};
+```
+
+## API за Прегледи
+
+### Интерфейси
+```typescript
+interface Appointment {
+  id: number;
+  doctor: {
+    id: number;
+    name: string;
+    specialty: string;
+  };
+  date: string;
+  time: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  notes: string;
+}
+
+interface AppointmentParams {
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface AppointmentResponse {
+  appointments: Appointment[];
+  total: number;
+  page: number;
+  limit: number;
 }
 ```
 
-## Authentication Flow
+### Функции
+```typescript
+const getAppointments = async (params: AppointmentParams): Promise<AppointmentResponse> => {
+  const response = await axios.get('/api/appointments', { params });
+  return response.data;
+};
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant AuthService
-    participant API
-    participant LocalStorage
+const createAppointment = async (data: {
+  doctor_id: number;
+  date: string;
+  time: string;
+  notes?: string;
+}): Promise<Appointment> => {
+  const response = await axios.post('/api/appointments', data);
+  return response.data;
+};
 
-    User->>AuthService: login(credentials)
-    AuthService->>API: POST /auth/login
-    API-->>AuthService: {token, user}
-    AuthService->>LocalStorage: Store token & user
-    AuthService-->>User: AuthResponse
-
-    User->>AuthService: getCurrentUser()
-    AuthService->>LocalStorage: Get stored user
-    LocalStorage-->>AuthService: User data
-    AuthService-->>User: User object
-
-    User->>AuthService: logout()
-    AuthService->>LocalStorage: Remove token & user
-    AuthService-->>User: void
+const updateAppointment = async (id: number, data: {
+  status?: string;
+  notes?: string;
+}): Promise<Appointment> => {
+  const response = await axios.put(`/api/appointments/${id}`, data);
+  return response.data;
+};
 ```
+
+## Общи Утилити
+
+### Обработка на Грешки
+```typescript
+interface ApiError {
+  message: string;
+  code: string;
+  status: number;
+}
+
+const handleApiError = (error: any): ApiError => {
+  if (error.response) {
+    return {
+      message: error.response.data.message,
+      code: error.response.data.code,
+      status: error.response.status
+    };
+  }
+  return {
+    message: 'Възникна грешка при обработката на заявката',
+    code: 'UNKNOWN_ERROR',
+    status: 500
+  };
+};
+```
+
+### Управление на Токени
+```typescript
+const setAuthToken = (token: string): void => {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+};
+
+const removeAuthToken = (): void => {
+  delete axios.defaults.headers.common['Authorization'];
+};
+```
+
+## Примери за Използване
+
+### Вход в Системата
+```typescript
+const handleLogin = async (username: string, password: string) => {
+  try {
+    const response = await login({ username, password });
+    setAuthToken(response.token);
+    // Пренасочване към началната страница
+  } catch (error) {
+    const apiError = handleApiError(error);
+    // Показване на съобщение за грешка
+  }
+};
+```
+
+### Търсене на Лекари
+```typescript
+const searchDoctorsBySpecialty = async (specialty: string) => {
+  try {
+    const response = await searchDoctors({ specialty });
+    // Актуализиране на списъка с лекари
+  } catch (error) {
+    const apiError = handleApiError(error);
+    // Показване на съобщение за грешка
+  }
+};
+```
+
+## Бележки за Имплементацията
+
+### Асинхронни Функции
+- Всички API функции са асинхронни
+- Използва се async/await синтаксис
+- Обработка на грешки с try/catch
+
+### Обработка на Грешки
+- Централизирана обработка на грешки
+- Типизирани съобщения за грешки
+- Логване на грешки
+
+### JWT Токени
+- Автоматично добавяне на токени
+- Обновяване на токени
+- Изчистване при изход 
