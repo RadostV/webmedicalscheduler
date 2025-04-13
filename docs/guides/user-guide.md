@@ -1,195 +1,195 @@
-# User Guide
+# Ръководство за Потребители
 
-This guide provides instructions for using the Medical Appointment System for both patients and doctors.
+Това ръководство предоставя инструкции за използване на Системата за Медицински Прегледи както за пациенти, така и за лекари.
 
-## Getting Started
+## Начало на Работата
 
-### Accessing the System
+### Достъп до Системата
 
-1. Open your web browser and navigate to the application URL
-2. You will be directed to the login page
+1. Отворете вашия уеб браузър и навигирайте до URL адреса на приложението
+2. Ще бъдете пренасочени към страницата за вход
 
-### Creating an Account
+### Създаване на Акаунт
 
-1. Click on the "Register" button on the login page
-2. Fill in your username and password
-3. Select your account type (Patient or Doctor)
-4. If you selected "Doctor", enter your medical specialty
-5. Click "Register" to create your account
-6. You will be automatically logged in and redirected to your dashboard
+1. Кликнете върху бутона "Регистрация" на страницата за вход
+2. Попълнете вашето потребителско име и парола
+3. Изберете типа на вашия акаунт (Пациент или Лекар)
+4. Ако избрахте "Лекар", въведете вашата медицинска специалност
+5. Кликнете "Регистрация" за създаване на акаунта
+6. Ще бъдете автоматично вписани и пренасочени към вашето табло
 
-### Logging In
+### Вход в Системата
 
-1. Enter your username and password on the login page
-2. Click "Login"
-3. You will be redirected to your dashboard based on your account type
+1. Въведете вашето потребителско име и парола на страницата за вход
+2. Кликнете "Вход"
+3. Ще бъдете пренасочени към вашето табло според типа на вашия акаунт
 
-## Patient Guide
+## Ръководство за Пациенти
 
-### Dashboard Overview
+### Преглед на Таблото
 
-The patient dashboard provides access to the following features:
+Таблото за пациенти предоставя достъп до следните функционалности:
 
-- View upcoming and past appointments
-- Schedule new appointments
-- View doctor profiles
+- Преглед на предстоящи и минали прегледи
+- Запазване на нови прегледи
+- Преглед на профили на лекари
 
-### Scheduling an Appointment
+### Запазване на Преглед
 
-1. Click on "Schedule Appointment" in the navigation menu
-2. Browse the list of available doctors
-3. Select a doctor to view their profile and availability
-4. Choose a date from the calendar (available dates will be highlighted)
-5. Select an available time slot
-6. Click "Schedule Appointment" to confirm
-7. You will see a confirmation message and the appointment will appear in your appointments list
+1. Кликнете върху "Запази Преглед" в навигационното меню
+2. Разгледайте списъка с налични лекари
+3. Изберете лекар, за да видите неговия профил и наличност
+4. Изберете дата от календара (наличните дати ще бъдат маркирани)
+5. Изберете наличен час
+6. Кликнете "Запази Преглед" за потвърждение
+7. Ще видите съобщение за потвърждение и прегледът ще се появи в списъка с вашите прегледи
 
 ```mermaid
 sequenceDiagram
     participant Patient
     participant System
 
-    Patient->>System: Navigate to Schedule Appointment
-    System->>Patient: Display available doctors
+    Patient->>System: Навигация към Запазване на Преглед
+    System->>Patient: Показване на налични лекари
 
-    Patient->>System: Select doctor
-    System->>Patient: Display doctor profile and calendar
+    Patient->>System: Избор на лекар
+    System->>Patient: Показване на профил на лекара и календар
 
-    Patient->>System: Select date
-    System->>Patient: Show available time slots
+    Patient->>System: Избор на дата
+    System->>Patient: Показване на налични часове
 
-    Patient->>System: Select time slot
-    Patient->>System: Confirm appointment
-    System->>Patient: Display confirmation
+    Patient->>System: Избор на час
+    Patient->>System: Потвърждение на преглед
+    System->>Patient: Показване на потвърждение
 ```
 
-### Viewing Appointments
+### Преглед на Прегледите
 
-1. Click on "My Appointments" in the navigation menu
-2. View a list of all your appointments, sorted by date
-3. Each appointment shows:
-   - Doctor name and specialty
-   - Date and time
-   - Status (scheduled, completed, or cancelled)
+1. Кликнете върху "Моите Прегледи" в навигационното меню
+2. Разгледайте списък с всички ваши прегледи, подредени по дата
+3. Всеки преглед показва:
+   - Име и специалност на лекара
+   - Дата и час
+   - Статус (запазен, завършен или отменен)
 
-### Managing Appointments
+### Управление на Прегледите
 
-- You cannot cancel appointments directly. If you need to cancel, please contact the medical facility.
-- Completed appointments will be marked as such after the doctor updates their status.
+- Не можете да отменяте прегледи директно. Ако трябва да отмените, моля, свържете се с медицинското заведение.
+- Завършените прегледи ще бъдат маркирани като такива след като лекарът актуализира техния статус.
 
-## Doctor Guide
+## Ръководство за Лекари
 
-### Dashboard Overview
+### Преглед на Таблото
 
-The doctor dashboard provides access to the following features:
+Таблото за лекари предоставя достъп до следните функционалности:
 
-- View upcoming and past appointments
-- Manage appointment status
-- Set availability
+- Преглед на предстоящи и минали прегледи
+- Управление на статуса на прегледите
+- Задаване на наличност
 
-### Setting Availability
+### Задаване на Наличност
 
-1. Click on "Manage Availability" in the navigation menu
-2. You will see your current availability settings
-3. To add new availability:
-   - Select a day of the week
-   - Set start and end times
-   - Click "Add Availability"
-4. To remove availability:
-   - Find the availability slot you want to remove
-   - Click the "Delete" button next to it
+1. Кликнете върху "Управление на Наличност" в навигационното меню
+2. Ще видите текущите настройки на вашата наличност
+3. За добавяне на нова наличност:
+   - Изберете ден от седмицата
+   - Задайте начален и краен час
+   - Кликнете "Добави Наличност"
+4. За премахване на наличност:
+   - Намерете часа, който искате да премахнете
+   - Кликнете бутона "Изтрий" до него
 
 ```mermaid
 sequenceDiagram
     participant Doctor
     participant System
 
-    Doctor->>System: Navigate to Manage Availability
-    System->>Doctor: Display current availability
+    Doctor->>System: Навигация към Управление на Наличност
+    System->>Doctor: Показване на текуща наличност
 
-    Doctor->>System: Add new availability (day, start/end time)
-    System->>Doctor: Update availability display
+    Doctor->>System: Добавяне на нова наличност (ден, начален/краен час)
+    System->>Doctor: Актуализиране на показването на наличност
 
-    Doctor->>System: Delete existing availability
-    System->>Doctor: Update availability display
+    Doctor->>System: Изтриване на съществуваща наличност
+    System->>Doctor: Актуализиране на показването на наличност
 ```
 
-### Viewing Schedule
+### Преглед на Графика
 
-1. Click on "My Schedule" in the navigation menu
-2. View your appointments in either:
-   - List view: Chronological list of appointments
-   - Calendar view: Visual calendar with appointments
+1. Кликнете върху "Моя График" в навигационното меню
+2. Разгледайте вашите прегледи в:
+   - Изглед списък: Хронологичен списък на прегледите
+   - Изглед календар: Визуален календар с прегледи
 
-### Managing Appointments
+### Управление на Прегледите
 
-1. From your schedule, click on an appointment to view details
-2. For scheduled appointments, you can:
-   - Mark as completed (after the appointment has taken place)
-   - Cancel (if the appointment cannot be kept)
-3. Click the appropriate button and confirm your action
-4. The appointment status will be updated
+1. От вашия график, кликнете върху преглед, за да видите детайли
+2. За запазени прегледи можете да:
+   - Маркирате като завършен (след като прегледът е извършен)
+   - Отмените (ако прегледът не може да се състои)
+3. Кликнете съответния бутон и потвърдете действието
+4. Статусът на прегледа ще бъде актуализиран
 
 ```mermaid
 sequenceDiagram
     participant Doctor
     participant System
 
-    Doctor->>System: Navigate to My Schedule
-    System->>Doctor: Display appointments
+    Doctor->>System: Навигация към Моя График
+    System->>Doctor: Показване на прегледи
 
-    Doctor->>System: Click on appointment
-    System->>Doctor: Show appointment details and actions
+    Doctor->>System: Кликване върху преглед
+    System->>Doctor: Показване на детайли и действия за прегледа
 
-    alt Mark as Completed
-        Doctor->>System: Click "Complete"
-        System->>Doctor: Confirm action
-        Doctor->>System: Confirm
-        System->>Doctor: Update appointment status
-    else Cancel Appointment
-        Doctor->>System: Click "Cancel"
-        System->>Doctor: Confirm action
-        Doctor->>System: Confirm
-        System->>Doctor: Update appointment status
+    alt Маркиране като Завършен
+        Doctor->>System: Кликване "Завърши"
+        System->>Doctor: Потвърждение на действието
+        Doctor->>System: Потвърждение
+        System->>Doctor: Актуализиране на статуса на прегледа
+    else Отмяна на Преглед
+        Doctor->>System: Кликване "Отмени"
+        System->>Doctor: Потвърждение на действието
+        Doctor->>System: Потвърждение
+        System->>Doctor: Актуализиране на статуса на прегледа
     end
 ```
 
-## Common Features
+## Общи Функционалности
 
-### Profile Management
+### Управление на Профил
 
-1. Click on your username in the top-right corner
-2. Select "Profile" from the dropdown menu
-3. View and edit your profile information
-4. Click "Save Changes" to update your profile
+1. Кликнете върху вашето потребителско име в горния десен ъгъл
+2. Изберете "Профил" от падащото меню
+3. Разгледайте и редактирайте информацията във вашия профил
+4. Кликнете "Запази Промените" за актуализиране на профила
 
-### Logging Out
+### Изход от Системата
 
-1. Click on your username in the top-right corner
-2. Select "Logout" from the dropdown menu
-3. You will be logged out and redirected to the login page
+1. Кликнете върху вашето потребителско име в горния десен ъгъл
+2. Изберете "Изход" от падащото меню
+3. Ще бъдете изписани и пренасочени към страницата за вход
 
-## Troubleshooting
+## Отстраняване на Проблеми
 
-### Common Issues
+### Често Срещани Проблеми
 
-1. **Cannot log in**
+1. **Не може да влезете**
 
-   - Verify that you are using the correct username and password
-   - Ensure caps lock is not enabled
-   - If you've forgotten your password, contact system administration
+   - Проверете дали използвате правилното потребителско име и парола
+   - Уверете се, че caps lock не е активиран
+   - Ако сте забравили паролата си, свържете се с системната администрация
 
-2. **No available time slots**
+2. **Няма налични часове**
 
-   - The doctor may not have set availability for the selected date
-   - All slots for that day may already be booked
-   - Try selecting a different date or doctor
+   - Лекарът може да не е задал наличност за избраната дата
+   - Всички часове за този ден може вече да са запазени
+   - Опитайте да изберете друга дата или лекар
 
-3. **Cannot see appointments**
-   - Ensure you are logged in with the correct account
-   - Check your internet connection
-   - Try refreshing the page
+3. **Не можете да видите прегледите**
+   - Уверете се, че сте вписани с правилния акаунт
+   - Проверете интернет връзката си
+   - Опитайте да опресните страницата
 
-### Getting Help
+### Получаване на Помощ
 
-If you encounter any issues not covered in this guide, please contact system support at support@medical-appointment-system.com or call our help desk at (555) 123-4567.
+Ако срещнете проблеми, които не са описани в това ръководство, моля, свържете се с системната поддръжка на support@medical-appointment-system.com или обадете се на нашата помощна линия на (555) 123-4567. 

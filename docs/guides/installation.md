@@ -1,26 +1,26 @@
-# Installation Guide
+# Ръководство за Инсталиране
 
-This guide will walk you through the steps to set up and run the Medical Appointment System locally.
+Това ръководство ще ви преведе през стъпките за настройка и стартиране на Системата за Медицински Прегледи локално.
 
-## Prerequisites
+## Предварителни Изисквания
 
-Before you begin, ensure you have the following installed:
+Преди да започнете, уверете се, че имате инсталирано следното:
 
-- [Node.js](https://nodejs.org/) (v14 or higher)
-- [npm](https://www.npmjs.com/) (v6 or higher)
-- [PostgreSQL](https://www.postgresql.org/) (v12 or higher)
-- [Git](https://git-scm.com/) (for cloning the repository)
+- [Node.js](https://nodejs.org/) (v14 или по-нова версия)
+- [npm](https://www.npmjs.com/) (v6 или по-нова версия)
+- [PostgreSQL](https://www.postgresql.org/) (v12 или по-нова версия)
+- [Git](https://git-scm.com/) (за клониране на репозиторито)
 
-## Clone the Repository
+## Клониране на Репозиторито
 
 ```bash
 git clone https://github.com/yourusername/medical-appointment-system.git
 cd medical-appointment-system
 ```
 
-## Database Setup
+## Настройка на Базата Данни
 
-1. Create a PostgreSQL database for the application:
+1. Създайте PostgreSQL база данни за приложението:
 
 ```bash
 psql -U postgres
@@ -28,9 +28,9 @@ CREATE DATABASE medical_appointment;
 \q
 ```
 
-2. Update the database connection settings in the backend:
+2. Актуализирайте настройките за връзка с базата данни в backend:
 
-Create a `.env` file in the `backend` directory with the following content (adjust values as needed):
+Създайте файл `.env` в директорията `backend` със следното съдържание (коригирайте стойностите според нуждите):
 
 ```
 DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/medical_appointment"
@@ -38,113 +38,113 @@ JWT_SECRET="your-jwt-secret-key"
 PORT=3001
 ```
 
-## Backend Setup
+## Настройка на Backend
 
-1. Navigate to the backend directory and install dependencies:
+1. Навигирайте до директорията на backend и инсталирайте зависимостите:
 
 ```bash
 cd backend
 npm install
 ```
 
-2. Run database migrations to set up the schema:
+2. Изпълнете миграции на базата данни за настройка на схемата:
 
 ```bash
 npx prisma migrate dev
 ```
 
-3. (Optional) Seed the database with sample data:
+3. (По избор) Попълнете базата данни с примерни данни:
 
 ```bash
 npm run seed
 ```
 
-4. Start the backend server:
+4. Стартирайте backend сървъра:
 
 ```bash
 npm run dev
 ```
 
-The backend API should now be running at `http://localhost:3001`.
+Backend API трябва да работи на `http://localhost:3001`.
 
-## Frontend Setup
+## Настройка на Frontend
 
-1. Open a new terminal, navigate to the frontend directory, and install dependencies:
+1. Отворете нов терминал, навигирайте до директорията на frontend и инсталирайте зависимостите:
 
 ```bash
 cd frontend
 npm install
 ```
 
-2. Create a `.env.local` file in the frontend directory with the API URL:
+2. Създайте файл `.env.local` в директорията на frontend с URL на API:
 
 ```
 REACT_APP_API_URL=http://localhost:3001/api
 ```
 
-3. Start the frontend development server:
+3. Стартирайте frontend development сървъра:
 
 ```bash
 npm start
 ```
 
-The frontend application should now be running at `http://localhost:3000`.
+Frontend приложението трябва да работи на `http://localhost:3000`.
 
-## Accessing the Application
+## Достъп до Приложението
 
-Once both the backend and frontend are running, you can access the application in your web browser:
+След като и backend, и frontend работят, можете да достъпите приложението във вашия уеб браузър:
 
 - Frontend: [http://localhost:3000](http://localhost:3000)
 - Backend API: [http://localhost:3001/api](http://localhost:3001/api)
-- API Documentation: [http://localhost:3001/api-docs](http://localhost:3001/api-docs) (Swagger UI)
+- API Документация: [http://localhost:3001/api-docs](http://localhost:3001/api-docs) (Swagger UI)
 
-## Demo Accounts
+## Демо Акаунти
 
-If you ran the seed script, you should have access to the following demo accounts:
+Ако изпълнихте seed скрипта, трябва да имате достъп до следните демо акаунти:
 
-### Doctor Account
+### Акаунт за Лекар
 
-- Username: doctor1
-- Password: password
+- Потребителско име: doctor1
+- Парола: password
 
-### Patient Account
+### Акаунт за Пациент
 
-- Username: patient1
-- Password: password
+- Потребителско име: patient1
+- Парола: password
 
-## Troubleshooting
+## Отстраняване на Проблеми
 
-### Database Connection Issues
+### Проблеми с Връзката към Базата Данни
 
-If you encounter database connection issues, verify:
+Ако срещнете проблеми с връзката към базата данни, проверете:
 
-- PostgreSQL is running
-- Database credentials in `.env` are correct
-- The database exists
+- PostgreSQL работи
+- Данните за достъп в `.env` са правилни
+- Базата данни съществува
 
-Try running `npx prisma db push` to ensure the schema is properly applied.
+Опитайте да изпълните `npx prisma db push`, за да се уверите, че схемата е правилно приложена.
 
-### API Connection Issues
+### Проблеми с Връзката към API
 
-If the frontend cannot connect to the backend:
+Ако frontend не може да се свърже с backend:
 
-- Verify both servers are running
-- Check CORS settings in the backend
-- Ensure the API URL in the frontend environment is correct
+- Проверете дали и двата сървъра работят
+- Проверете настройките за CORS в backend
+- Уверете се, че API URL в frontend средата е правилен
 
-### Port Conflicts
+### Конфликти на Порти
 
-If port 3000 or 3001 is already in use, you can change the ports:
+Ако порт 3000 или 3001 вече се използва, можете да промените портовете:
 
-- For backend: Update the `PORT` value in the `.env` file
-- For frontend: Create a `.env.local` file with `PORT=3002` (or any other available port)
+- За backend: Актуализирайте стойността на `PORT` в `.env` файла
+- За frontend: Създайте `.env.local` файл с `PORT=3002` (или друг наличен порт)
 
-## Docker Setup (Optional)
+## Docker Настройка (По Избор)
 
-If you prefer to use Docker:
+Ако предпочитате да използвате Docker:
 
-1. Ensure Docker and Docker Compose are installed
-2. Create a `docker-compose.yml` file in the root directory:
+1. Уверете се, че Docker и Docker Compose са инсталирани
+2. Създайте `docker-compose.yml` файл в основната директория:
 
 ```yaml
 version: "3"
@@ -185,10 +185,10 @@ volumes:
   postgres_data:
 ```
 
-3. Run the application with Docker Compose:
+3. Стартирайте приложението с Docker Compose:
 
 ```bash
 docker-compose up
 ```
 
-This will start the database, backend, and frontend services together.
+Това ще стартира базата данни, backend и frontend услугите заедно. 

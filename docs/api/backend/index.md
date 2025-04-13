@@ -1,100 +1,322 @@
-# Backend API Documentation
+# Backend API Документация
 
-This section documents the backend REST API endpoints for the Medical Appointment System.
+## Общ Преглед
 
-## API Overview
+Този документ описва REST API endpoints, използвани в backend частта на Системата за Медицински Прегледи. API-то е базирано на HTTP/HTTPS протокола и използва JSON формат за обмен на данни.
 
-The backend provides RESTful API endpoints for:
+## Автентикация
 
-- User authentication (login, registration)
-- Doctor availability management
-- Appointment scheduling and management
-- Doctor and patient information retrieval
+### Вход в Системата
 
-## API Structure
-
-```mermaid
-graph LR
-    A[API Routes] --> B[Auth Routes]
-    A --> C[Doctor Routes]
-    A --> D[Patient Routes]
-    B --> B1[Login]
-    B --> B2[Register]
-    C --> C1[Availability]
-    C --> C2[Appointments]
-    C --> C3[Profile]
-    D --> D1[Appointments]
-    D --> D2[Doctors]
-    D --> D3[Profile]
+```http
+POST /api/auth/login
 ```
 
-## Authentication
+#### Описание
+Автентикира потребител и връща JWT токен за достъп.
 
-All protected routes require a valid JWT token provided in the Authorization header:
-
+#### Заглавни Редове
 ```
-Authorization: Bearer [JWT_TOKEN]
+Content-Type: application/json
 ```
 
-## Available Endpoints
-
-### Authentication Endpoints
-
-Detailed documentation: [Auth API](auth.md)
-
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-
-### Doctor Endpoints
-
-Detailed documentation: [Doctor API](doctor.md)
-
-- `GET /api/doctors/appointments` - Get doctor's appointments
-- `PATCH /api/doctors/appointments/:id/status` - Update appointment status
-- `GET /api/doctors/availability` - Get doctor's availability
-- `POST /api/doctors/availability` - Set doctor's availability
-- `DELETE /api/doctors/availability/:id` - Delete availability slot
-- `GET /api/doctors/:id/slots` - Get doctor's available time slots for a specific date
-
-### Patient Endpoints
-
-Detailed documentation: [Patient API](patient.md)
-
-- `GET /api/patients/appointments` - Get patient's appointments
-- `POST /api/patients/appointments` - Schedule a new appointment
-- `GET /api/doctors` - Get all doctors
-- `GET /api/doctors/:id` - Get doctor details
-
-## Error Handling
-
-The API uses standard HTTP status codes to indicate the success or failure of requests:
-
-- 200 - OK
-- 201 - Created
-- 400 - Bad Request
-- 401 - Unauthorized
-- 403 - Forbidden
-- 404 - Not Found
-- 500 - Internal Server Error
-
-Error responses follow this format:
-
+#### Тяло на Заявката
 ```json
 {
-  "success": false,
-  "message": "Error message description"
+  "username": "string",
+  "password": "string"
 }
 ```
 
-## Response Format
-
-Successful responses generally follow this format:
-
+#### Отговор
 ```json
 {
-  "success": true,
-  "data": {
-    // Response data
+  "token": "string",
+  "user": {
+    "id": "number",
+    "type": "string"
   }
 }
 ```
+
+### Регистрация
+
+```http
+POST /api/auth/register
+```
+
+#### Описание
+Регистрира нов потребител в системата.
+
+#### Заглавни Редове
+```
+Content-Type: application/json
+```
+
+#### Тяло на Заявката
+```json
+{
+  "username": "string",
+  "password": "string",
+  "type": "string",
+  "specialty": "string" // Само за лекари
+}
+```
+
+#### Отговор
+```json
+{
+  "id": "number",
+  "username": "string",
+  "type": "string"
+}
+```
+
+## Лекарски Endpoints
+
+### Получаване на Профил
+
+```http
+GET /api/doctors/profile
+```
+
+#### Описание
+Получава профила на автентикирания лекар.
+
+#### Заглавни Редове
+```
+Authorization: Bearer <token>
+```
+
+#### Отговор
+```json
+{
+  "id": "string",
+  "userId": "string",
+  "specialty": "string",
+  "education": "string",
+  "qualification": "string",
+  "description": "string",
+  "location": "string",
+  "languages": "string",
+  "photoUrl": "string"
+}
+```
+
+### Актуализиране на Профил
+
+```http
+PUT /api/doctors/profile
+```
+
+#### Описание
+Актуализира профила на автентикирания лекар.
+
+#### Заглавни Редове
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+#### Тяло на Заявката
+```json
+{
+  "specialty": "string",
+  "education": "string",
+  "qualification": "string",
+  "description": "string",
+  "location": "string",
+  "languages": "string"
+}
+```
+
+#### Отговор
+```json
+{
+  "id": "string",
+  "userId": "string",
+  "specialty": "string",
+  "education": "string",
+  "qualification": "string",
+  "description": "string",
+  "location": "string",
+  "languages": "string",
+  "photoUrl": "string"
+}
+```
+
+### Управление на Наличност
+
+#### Добавяне на Наличност
+
+```http
+POST /api/doctors/availability
+```
+
+#### Описание
+Добавя нов период на наличност за автентикирания лекар.
+
+#### Заглавни Редове
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+#### Тяло на Заявката
+```json
+{
+  "dayOfWeek": "number",
+  "startTime": "string",
+  "endTime": "string"
+}
+```
+
+#### Отговор
+```json
+{
+  "id": "number",
+  "doctorId": "number",
+  "dayOfWeek": "number",
+  "startTime": "string",
+  "endTime": "string"
+}
+```
+
+#### Премахване на Наличност
+
+```http
+DELETE /api/doctors/availability/:id
+```
+
+#### Описание
+Премахва период на наличност от автентикирания лекар.
+
+#### Заглавни Редове
+```
+Authorization: Bearer <token>
+```
+
+#### Отговор
+```json
+{
+  "success": true
+}
+```
+
+## Пациентски Endpoints
+
+### Търсене на Лекари
+
+```http
+GET /api/doctors
+```
+
+#### Описание
+Получава списък с всички лекари, филтрирани по специалност и местоположение.
+
+#### Параметри на Заявката
+```
+specialty: string (по избор)
+location: string (по избор)
+```
+
+#### Отговор
+```json
+{
+  "doctors": [
+    {
+      "id": "string",
+      "userId": "string",
+      "specialty": "string",
+      "education": "string",
+      "qualification": "string",
+      "description": "string",
+      "location": "string",
+      "languages": "string",
+      "photoUrl": "string"
+    }
+  ]
+}
+```
+
+### Запазване на Преглед
+
+```http
+POST /api/appointments
+```
+
+#### Описание
+Създава нов преглед за автентикирания пациент.
+
+#### Заглавни Редове
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+#### Тяло на Заявката
+```json
+{
+  "doctorId": "number",
+  "dateTime": "string"
+}
+```
+
+#### Отговор
+```json
+{
+  "id": "number",
+  "doctorId": "number",
+  "patientId": "number",
+  "dateTime": "string",
+  "status": "string"
+}
+```
+
+### Преглед на Прегледите
+
+```http
+GET /api/appointments
+```
+
+#### Описание
+Получава списък с всички прегледи на автентикирания потребител.
+
+#### Заглавни Редове
+```
+Authorization: Bearer <token>
+```
+
+#### Отговор
+```json
+{
+  "appointments": [
+    {
+      "id": "number",
+      "doctorId": "number",
+      "patientId": "number",
+      "dateTime": "string",
+      "status": "string",
+      "consultationAnalysis": "string",
+      "description": "string"
+    }
+  ]
+}
+```
+
+## Кодове на Отговори
+
+- `200 OK`: Успешна заявка
+- `201 Created`: Успешно създаден ресурс
+- `400 Bad Request`: Невалидни данни в заявката
+- `401 Unauthorized`: Неавтентикиран достъп
+- `403 Forbidden`: Нямате права за достъп
+- `404 Not Found`: Ресурсът не е намерен
+- `500 Internal Server Error`: Вътрешна сървърна грешка
+
+## Ограничения на API
+
+- Всички заявки трябва да използват HTTPS
+- JWT токените имат срок на валидност от 24 часа
+- Максимален размер на заявката: 1MB
+- Rate limiting: 100 заявки на минута на IP адрес 
