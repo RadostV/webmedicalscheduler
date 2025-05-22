@@ -34,6 +34,7 @@ import { Appointment, AppointmentStatus, CalendarEvent } from '../../types/share
 import { API_BASE_URL } from '../../config/api.config';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -50,9 +51,10 @@ const getStatusColor = (status: string) => {
 
 interface ExpandableRowProps {
   appointment: Appointment;
+  onDelete: (appointment: Appointment) => void;
 }
 
-const ExpandableRow: React.FC<ExpandableRowProps> = ({ appointment }) => {
+const ExpandableRow: React.FC<ExpandableRowProps> = ({ appointment, onDelete }) => {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const token = localStorage.getItem('token');
@@ -89,9 +91,19 @@ const ExpandableRow: React.FC<ExpandableRowProps> = ({ appointment }) => {
             size="small"
           />
         </TableCell>
+        <TableCell>
+          <IconButton
+            aria-label="delete"
+            color="error"
+            onClick={() => onDelete(appointment)}
+            disabled={appointment.status !== 'scheduled'}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={5}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
               <Typography variant="h6" gutterBottom component="div">
@@ -239,6 +251,32 @@ const Schedule: React.FC = () => {
     setModalOpen(true);
   };
 
+  const handleDeleteAppointment = (appointment: Appointment) => {
+    setModalData({
+      title: 'Delete Appointment',
+      message: `Are you sure you want to delete the appointment with ${appointment.patientName}?`,
+      action: async () => {
+        try {
+          setLoading(true);
+          await doctorService.deleteAppointment(appointment.id);
+          setAppointments((prevAppointments) => prevAppointments.filter((app) => app.id !== appointment.id));
+          setSuccessMessage('Appointment deleted successfully');
+          setTimeout(() => setSuccessMessage(null), 3000);
+          setModalOpen(false);
+          setActionModalOpen(false);
+          setSelectedAppointment(null);
+          setError(null);
+        } catch (err) {
+          setError(`Failed to delete appointment. Please try again later.`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+
+    setModalOpen(true);
+  };
+
   const convertToCalendarEvents = (appointments: Appointment[]): CalendarEvent[] => {
     return appointments.map((appointment) => {
       const startDate = new Date(appointment.dateTime);
@@ -292,13 +330,18 @@ const Schedule: React.FC = () => {
                       <TableCell>Date</TableCell>
                       <TableCell>Time</TableCell>
                       <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {appointments
                       .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
                       .map((appointment) => (
-                        <ExpandableRow key={appointment.id} appointment={appointment} />
+                        <ExpandableRow
+                          key={appointment.id}
+                          appointment={appointment}
+                          onDelete={handleDeleteAppointment}
+                        />
                       ))}
                   </TableBody>
                 </Table>
@@ -452,6 +495,17 @@ const Schedule: React.FC = () => {
                   }}
                 >
                   Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => {
+                    setActionModalOpen(false);
+                    handleDeleteAppointment(selectedAppointment);
+                  }}
+                >
+                  Delete
                 </Button>
                 <Button
                   variant="outlined"

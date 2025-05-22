@@ -47,6 +47,7 @@ export const doctorService = {
 
   updateAppointmentStatus: appointmentService.updateAppointmentStatus,
   completeAppointment: appointmentService.completeAppointment,
+  deleteAppointment: appointmentService.deleteAppointment,
 
   async updateProfile(profileData: Partial<DoctorProfile>): Promise<DoctorProfile> {
     const response = await api.patch<DoctorProfile>('/api/doctors/profile', profileData);

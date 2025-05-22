@@ -54,6 +54,10 @@ export const appointmentService = {
     return response.data;
   },
 
+  async deleteAppointment(appointmentId: string): Promise<void> {
+    await api.delete(`/api/doctors/appointments/${appointmentId}`);
+  },
+
   async scheduleAppointment(formData: FormData): Promise<Appointment> {
     const response = await api.post<Appointment>('/api/patients/appointments', formData, {
       headers: {

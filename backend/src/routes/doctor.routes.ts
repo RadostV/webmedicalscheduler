@@ -752,6 +752,61 @@ router.patch('/appointments/:id/status', async (req: Request, res: Response): Pr
 
 /**
  * @swagger
+ * /api/doctors/appointments/{id}:
+ *   delete:
+ *     summary: Delete an appointment
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Appointment ID
+ *     responses:
+ *       200:
+ *         description: Appointment deleted successfully
+ *       404:
+ *         description: Appointment not found
+ *       403:
+ *         description: Not authorized to delete this appointment
+ *       500:
+ *         description: Failed to delete appointment
+ */
+router.delete('/appointments/:id', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const appointmentId = parseInt(req.params.id);
+
+    // Check if the appointment exists and belongs to this doctor
+    const appointment = await prisma.appointment.findFirst({
+      where: {
+        id: appointmentId,
+        doctorId: req.user!.id,
+      },
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ error: 'Appointment not found or not authorized to delete' });
+    }
+
+    // Delete the appointment
+    await prisma.appointment.delete({
+      where: {
+        id: appointmentId,
+      },
+    });
+
+    return res.json({ message: 'Appointment deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting appointment:', error);
+    return res.status(500).json({ error: 'Failed to delete appointment' });
+  }
+});
+
+/**
+ * @swagger
  * /api/doctors/profile:
  *   patch:
  *     summary: Update doctor's profile
