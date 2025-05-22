@@ -1,6 +1,6 @@
 import api from '../../config/api.config';
 import { Appointment } from '../../types/shared/appointment.types';
-import { PatientProfile } from '../../types/shared/auth.types';
+import { PatientProfile, DoctorProfile } from '../../types/shared/auth.types';
 
 export interface TimeSlot {
   time: string; // Format: "HH:mm"
@@ -20,6 +20,11 @@ class PatientService {
 
   async getDoctors() {
     const response = await api.get('/api/patients/doctors');
+    return response.data;
+  }
+
+  async getDoctorProfile(doctorId: string): Promise<DoctorProfile> {
+    const response = await api.get(`/api/patients/doctors/${doctorId}`);
     return response.data;
   }
 

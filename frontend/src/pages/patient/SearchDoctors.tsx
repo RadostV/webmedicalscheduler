@@ -99,7 +99,7 @@ const SearchDoctors: React.FC = () => {
   };
 
   const handleViewProfile = (doctor: DoctorProfile) => {
-    navigate(`/patient/doctors/${doctor.userId}`);
+    navigate(`/patient/doctors/${doctor.id}`);
   };
 
   return (

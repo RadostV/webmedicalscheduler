@@ -1007,5 +1007,86 @@ function generateTimeSlots(date: Date, startTime: string, endTime: string): stri
   return slots;
 }
 
+/**
+ * @swagger
+ * /api/patients/doctors/{doctorId}:
+ *   get:
+ *     summary: Get a specific doctor's profile by ID
+ *     tags: [Patients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Doctor ID
+ *     responses:
+ *       200:
+ *         description: Doctor profile data
+ *       404:
+ *         description: Doctor not found
+ *       500:
+ *         description: Failed to fetch doctor profile
+ */
+router.get('/doctors/:doctorId', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { doctorId } = req.params;
+    const doctorIdNumber = parseInt(doctorId);
+
+    console.log(`Fetching doctor with ID: ${doctorId}`);
+
+    // Validate doctorId is a number
+    if (isNaN(doctorIdNumber)) {
+      console.log(`Invalid doctor ID format: ${doctorId}`);
+      return res.status(400).json({ error: 'Invalid doctor ID format' });
+    }
+
+    // Find the doctor
+    const doctor = await prisma.doctor.findUnique({
+      where: {
+        id: doctorIdNumber,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+
+    if (!doctor) {
+      console.log(`Doctor not found with ID: ${doctorId}`);
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+
+    console.log(`Found doctor: ${doctor.user.username} (ID: ${doctor.id})`);
+
+    // Format the response
+    const formattedDoctor = {
+      id: doctor.id.toString(),
+      userId: doctor.user.id.toString(),
+      name: doctor.user.username,
+      specialty: doctor.specialty || '',
+      education: doctor.education || '',
+      qualification: doctor.qualification || '',
+      description: doctor.description || '',
+      phone: doctor.phone || '',
+      email: doctor.email || '',
+      location: doctor.location || '',
+      languages: doctor.languages || '',
+      photoUrl: doctor.photo ? `/api/doctors/profile/photo/${doctor.id}` : null,
+    };
+
+    return res.json(formattedDoctor);
+  } catch (error) {
+    console.error('Error fetching doctor profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch doctor profile' });
+  }
+});
+
 // Export both routers
 export { publicRouter, router as default };
