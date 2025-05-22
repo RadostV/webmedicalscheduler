@@ -837,5 +837,175 @@ router.post(
   }
 );
 
+/**
+ * @swagger
+ * /api/patients/doctors:
+ *   get:
+ *     summary: Get all available doctors
+ *     tags: [Patients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of doctors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   userId:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   specialty:
+ *                     type: string
+ *       500:
+ *         description: Failed to fetch doctors
+ */
+router.get('/doctors', async (_req: Request, res: Response): Promise<Response> => {
+  try {
+    // Fetch all doctors with their profiles
+    const doctors = await prisma.doctor.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+
+    // Format the response for the frontend
+    const formattedDoctors = doctors.map((doctor) => ({
+      id: doctor.id.toString(),
+      userId: doctor.userId.toString(),
+      name: doctor.user.username,
+      specialty: doctor.specialty || '',
+      education: doctor.education || '',
+      qualification: doctor.qualification || '',
+      photoUrl: doctor.photo ? `/api/doctors/profile/photo/${doctor.id}` : null,
+    }));
+
+    return res.json(formattedDoctors);
+  } catch (error) {
+    console.error('Error fetching doctors:', error);
+    return res.status(500).json({ error: 'Failed to fetch doctors' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/patients/doctors/{doctorId}/slots:
+ *   get:
+ *     summary: Get available time slots for a specific doctor on a specific date
+ *     tags: [Patients]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Doctor ID
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Date to check availability (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: List of available time slots
+ *       400:
+ *         description: Date parameter is required
+ *       404:
+ *         description: No availability found for this day
+ *       500:
+ *         description: Failed to fetch available slots
+ */
+router.get('/doctors/:doctorId/slots', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { doctorId } = req.params;
+    const dateStr = req.query.date as string;
+
+    if (!dateStr) {
+      return res.status(400).json({ error: 'Date parameter is required' });
+    }
+
+    const date = new Date(dateStr);
+    // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
+    const dayOfWeek = (date.getDay() + 6) % 7;
+
+    // Find the doctor profile
+    const doctorProfile = await prisma.doctor.findFirst({
+      where: {
+        id: parseInt(doctorId),
+      },
+      include: {
+        availability: {
+          where: {
+            dayOfWeek,
+          },
+        },
+      },
+    });
+
+    if (!doctorProfile || !doctorProfile.availability.length) {
+      return res.status(404).json({ error: 'No availability found for this day' });
+    }
+
+    const availability = doctorProfile.availability[0];
+
+    // Generate time slots
+    const slots = generateTimeSlots(date, availability.startTime, availability.endTime);
+
+    // Filter out slots that are already booked
+    const bookedAppointments = await prisma.appointment.findMany({
+      where: {
+        doctorId: doctorProfile.userId,
+        dateTime: {
+          gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
+          lt: new Date(new Date(date).setHours(24, 0, 0, 0)),
+        },
+      },
+    });
+
+    const bookedTimes = new Set(bookedAppointments.map((apt) => apt.dateTime.toTimeString().slice(0, 5)));
+    const availableSlots = slots.filter((slot) => !bookedTimes.has(slot));
+
+    return res.json(availableSlots);
+  } catch (error) {
+    console.error('Error fetching slots:', error);
+    return res.status(500).json({ error: 'Failed to fetch available slots' });
+  }
+});
+
+// Helper function to generate time slots
+function generateTimeSlots(date: Date, startTime: string, endTime: string): string[] {
+  const slots: string[] = [];
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+
+  let currentTime = new Date(date);
+  currentTime.setHours(startHour, startMinute, 0);
+
+  const endDateTime = new Date(date);
+  endDateTime.setHours(endHour, endMinute, 0);
+
+  while (currentTime < endDateTime) {
+    slots.push(currentTime.toTimeString().slice(0, 5));
+    currentTime.setMinutes(currentTime.getMinutes() + 30); // 30-minute slots
+  }
+
+  return slots;
+}
+
 // Export both routers
 export { publicRouter, router as default };
