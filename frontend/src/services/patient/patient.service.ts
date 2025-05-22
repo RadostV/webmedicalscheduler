@@ -19,12 +19,14 @@ class PatientService {
   }
 
   async getDoctors() {
-    const response = await api.get('/api/patients/doctors');
+    const timestamp = new Date().getTime();
+    const response = await api.get(`/api/patients/doctors?t=${timestamp}`);
     return response.data;
   }
 
   async getDoctorProfile(doctorId: string): Promise<DoctorProfile> {
-    const response = await api.get(`/api/patients/doctors/${doctorId}`);
+    const timestamp = new Date().getTime();
+    const response = await api.get(`/api/patients/doctors/${doctorId}?t=${timestamp}`);
     return response.data;
   }
 

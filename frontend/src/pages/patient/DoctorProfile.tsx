@@ -83,7 +83,13 @@ const DoctorProfile: React.FC = () => {
       <Paper sx={{ p: 4, bgcolor: '#f9fff0' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
           {doctor.photoUrl ? (
-            <Avatar src={`${API_BASE_URL}${doctor.photoUrl}`} alt={doctor.name} sx={{ width: 120, height: 120 }} />
+            <Avatar
+              src={`${
+                doctor.photoUrl.startsWith('http') ? doctor.photoUrl : `${API_BASE_URL}${doctor.photoUrl}`
+              }?t=${new Date().getTime()}`}
+              alt={doctor.name}
+              sx={{ width: 120, height: 120 }}
+            />
           ) : (
             <Avatar sx={{ width: 120, height: 120, fontSize: '3rem' }}>{doctor.name.charAt(0)}</Avatar>
           )}

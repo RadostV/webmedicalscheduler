@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -21,6 +21,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { doctorService } from '../../services/doctor/doctor.service';
+import { patientService } from '../../services/patient/patient.service';
 import { DoctorProfile } from '../../types/shared/auth.types';
 import { API_BASE_URL } from '../../config/api.config';
 
@@ -52,6 +53,24 @@ const SearchDoctors: React.FC = () => {
     languages: '',
   });
 
+  // Load doctors on component mount
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      setLoading(true);
+      try {
+        const doctorList = await patientService.getDoctors();
+        setDoctors(doctorList);
+      } catch (error) {
+        console.error('Failed to load doctors:', error);
+        setError('Failed to load doctors. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
   const handleFilterChange = (field: keyof SearchFilters) => (event: React.ChangeEvent<HTMLInputElement>) => {
     setFilters((prev) => ({
       ...prev,
@@ -63,7 +82,17 @@ const SearchDoctors: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const searchResults = await doctorService.searchDoctors(filters);
+      // Check if any filter is active
+      const hasActiveFilters = Object.values(filters).some((filter) => filter !== '');
+
+      let searchResults;
+      if (hasActiveFilters) {
+        // If filters are active, use the search functionality
+        searchResults = await doctorService.searchDoctors(filters);
+      } else {
+        // If no filters, get all doctors with our cache busting
+        searchResults = await patientService.getDoctors();
+      }
       setDoctors(searchResults);
     } catch (error) {
       console.error('Failed to search doctors:', error);
@@ -245,7 +274,9 @@ const SearchDoctors: React.FC = () => {
               <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
                 {doctor.photoUrl ? (
                   <Avatar
-                    src={`${API_BASE_URL}${doctor.photoUrl}`}
+                    src={`${
+                      doctor.photoUrl.startsWith('http') ? doctor.photoUrl : `${API_BASE_URL}${doctor.photoUrl}`
+                    }?t=${new Date().getTime()}`}
                     alt={doctor.name}
                     sx={{ width: 60, height: 60, mr: 2 }}
                   />
