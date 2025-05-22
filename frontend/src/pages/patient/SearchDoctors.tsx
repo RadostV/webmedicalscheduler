@@ -245,7 +245,7 @@ const SearchDoctors: React.FC = () => {
               <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
                 {doctor.photoUrl ? (
                   <Avatar
-                    src={`${API_BASE_URL}${doctor.photoUrl}`}
+                    src={`${API_BASE_URL}${doctor.photoUrl}?t=${new Date().getTime()}`}
                     alt={doctor.name}
                     sx={{ width: 60, height: 60, mr: 2 }}
                   />

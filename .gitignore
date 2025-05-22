@@ -106,3 +106,6 @@ temp/
 # Test coverage
 coverage/
 .nyc_output 
+
+# Database
+backend/prisma/dev.db 
