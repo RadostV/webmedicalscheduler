@@ -1195,5 +1195,65 @@ router.get('/doctors/debug', async (_req: Request, res: Response): Promise<Respo
   }
 });
 
+/**
+ * @swagger
+ * /api/patients/profile:
+ *   delete:
+ *     summary: Delete patient profile and all associated appointments
+ *     tags: [Patients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Patient profile and appointments deleted successfully
+ *       500:
+ *         description: Failed to delete patient profile
+ */
+router.delete('/profile', async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const userId = req.user!.id;
+
+    // Get the patient profile
+    const patient = await prisma.patient.findUnique({
+      where: {
+        userId,
+      },
+    });
+
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient profile not found' });
+    }
+
+    // Delete in transaction to ensure all related data is removed
+    await prisma.$transaction(async (tx) => {
+      // Delete all appointments for this patient
+      await tx.appointment.deleteMany({
+        where: {
+          patientId: userId,
+        },
+      });
+
+      // Delete patient profile
+      await tx.patient.delete({
+        where: {
+          userId,
+        },
+      });
+
+      // Delete the user account
+      await tx.user.delete({
+        where: {
+          id: userId,
+        },
+      });
+    });
+
+    return res.json({ message: 'Patient profile and account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting patient profile:', error);
+    return res.status(500).json({ error: 'Failed to delete patient profile' });
+  }
+});
+
 // Export both routers
 export { publicRouter, router as default };

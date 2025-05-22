@@ -52,6 +52,10 @@ class PatientService {
     return response.data;
   }
 
+  async deleteProfile(): Promise<void> {
+    await api.delete('/api/patients/profile');
+  }
+
   async uploadPhoto(file: File): Promise<PatientProfile> {
     const formData = new FormData();
     formData.append('photo', file);

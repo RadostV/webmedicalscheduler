@@ -1359,15 +1359,15 @@ router.delete('/profile', async (req: AuthenticatedRequest, res: Response): Prom
         },
       });
 
-      // Optionally, delete user account if needed
-      // await tx.user.delete({
-      //   where: {
-      //     id: userId,
-      //   },
-      // });
+      // Delete the user account
+      await tx.user.delete({
+        where: {
+          id: userId,
+        },
+      });
     });
 
-    return res.json({ message: 'Doctor profile and all associated data deleted successfully' });
+    return res.json({ message: 'Doctor profile and account deleted successfully' });
   } catch (error) {
     console.error('Error deleting doctor profile:', error);
     return res.status(500).json({ error: 'Failed to delete doctor profile' });
