@@ -25,13 +25,9 @@ const Navbar: React.FC = () => {
 
   const handleProfileClick = () => {
     setAnchorEl(null);
-    if (user?.type === 'patient') {
-      navigate('/patient/appointments', { replace: true });
-    } else {
-      const profilePath = `/${user!.type}/profile`;
-      if (location.pathname !== profilePath) {
-        navigate(profilePath, { replace: true });
-      }
+    const profilePath = `/${user!.type}/profile`;
+    if (location.pathname !== profilePath) {
+      navigate(profilePath, { replace: true });
     }
   };
 

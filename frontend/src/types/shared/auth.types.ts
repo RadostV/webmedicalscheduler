@@ -21,11 +21,29 @@ export interface DoctorProfile {
   photoUrl?: string;
 }
 
+export interface PatientProfile {
+  id: string;
+  userId: string;
+  name: string;
+  dateOfBirth?: string;
+  gender?: string;
+  medicalHistory?: string;
+  allergies?: string;
+  medications?: string;
+  bloodType?: string;
+  phone: string;
+  email: string;
+  address: string;
+  emergencyContact?: string;
+  photoUrl?: string;
+}
+
 export interface User {
   id: string;
   username: string;
   type: UserType;
   doctorProfile?: DoctorProfile;
+  patientProfile?: PatientProfile;
 }
 
 export interface AuthState {

@@ -6,6 +6,7 @@ import AppointmentList from './AppointmentList';
 import AppointmentScheduler from './AppointmentScheduler';
 import SearchDoctors from './SearchDoctors';
 import DoctorProfile from './DoctorProfile';
+import PatientProfile from './PatientProfile';
 import ProtectedRoute from '../../components/shared/ProtectedRoute';
 
 const PatientPortal: React.FC = () => {
@@ -50,7 +51,7 @@ const PatientPortal: React.FC = () => {
             path="profile"
             element={
               <ProtectedRoute requiredRole="patient">
-                <Navigate to="/patient/appointments" replace />
+                <PatientProfile />
               </ProtectedRoute>
             }
           />

@@ -125,7 +125,7 @@ const AppointmentScheduler: React.FC = () => {
         setDoctors(doctorsList);
 
         // If we have a pre-selected doctor but it's not in the list, add it
-        if (preSelectedDoctor && !doctorsList.find((d) => d.userId === preSelectedDoctor.userId)) {
+        if (preSelectedDoctor && !doctorsList.find((d: Doctor) => d.userId === preSelectedDoctor.userId)) {
           setDoctors((prev) => [
             ...prev,
             {

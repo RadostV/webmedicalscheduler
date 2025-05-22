@@ -1,25 +1,57 @@
 import api from '../../config/api.config';
-import { Doctor } from '../../types/doctor';
-import { appointmentService } from '../shared/appointment.service';
+import { Appointment } from '../../types/shared/appointment.types';
+import { PatientProfile } from '../../types/shared/auth.types';
 
 export interface TimeSlot {
   time: string; // Format: "HH:mm"
   available: boolean;
 }
 
-export const patientService = {
-  getAppointments: () => appointmentService.getAppointments('patient'),
-  scheduleAppointment: appointmentService.scheduleAppointment,
-
-  async getDoctors(): Promise<Doctor[]> {
-    const response = await api.get<Doctor[]>('/api/doctors');
+class PatientService {
+  async getAppointments(): Promise<Appointment[]> {
+    const response = await api.get('/api/patients/appointments');
     return response.data;
-  },
+  }
+
+  async scheduleAppointment(formData: FormData): Promise<Appointment> {
+    const response = await api.post('/api/patients/appointments', formData);
+    return response.data;
+  }
+
+  async getDoctors() {
+    const response = await api.get('/api/patients/doctors');
+    return response.data;
+  }
 
   async getDoctorSlots(doctorId: string, date: string): Promise<string[]> {
-    const response = await api.get<string[]>(`/api/doctors/${doctorId}/slots`, {
+    const response = await api.get(`/api/patients/doctors/${doctorId}/slots`, {
       params: { date },
     });
     return response.data;
-  },
-};
+  }
+
+  async getPatientProfile(userId: string): Promise<PatientProfile> {
+    const response = await api.get(`/api/patients/profile/${userId}`);
+    return response.data;
+  }
+
+  async updateProfile(profileData: Partial<PatientProfile>): Promise<PatientProfile> {
+    const response = await api.patch('/api/patients/profile', profileData);
+    return response.data;
+  }
+
+  async uploadPhoto(file: File): Promise<PatientProfile> {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const response = await api.post('/api/patients/profile/photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data;
+  }
+}
+
+export const patientService = new PatientService();

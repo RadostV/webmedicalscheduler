@@ -20,6 +20,7 @@ model User {
   
   // Relations
   doctorProfile     Doctor?
+  patientProfile    Patient?
   patientAppointments Appointment[] @relation("PatientAppointments")
   doctorAppointments  Appointment[] @relation("DoctorAppointments")
 }
@@ -44,6 +45,27 @@ model Doctor {
   // Relations
   user         User          @relation(fields: [userId], references: [id])
   availability Availability[]
+}
+
+model Patient {
+  id               Int       @id @default(autoincrement())
+  userId           Int       @unique
+  dateOfBirth      String?
+  gender           String?
+  medicalHistory   String?
+  allergies        String?
+  medications      String?
+  bloodType        String?
+  phone            String
+  email            String    @unique
+  address          String
+  emergencyContact String?
+  photo            String?   // Path to stored photo
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  // Relations
+  user             User      @relation(fields: [userId], references: [id])
 }
 
 model Appointment {
