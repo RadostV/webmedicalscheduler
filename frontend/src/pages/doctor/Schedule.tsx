@@ -35,6 +35,8 @@ import { API_BASE_URL } from '../../config/api.config';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -52,9 +54,10 @@ const getStatusColor = (status: string) => {
 interface ExpandableRowProps {
   appointment: Appointment;
   onDelete: (appointment: Appointment) => void;
+  onStatusChange: (appointment: Appointment, status: AppointmentStatus) => void;
 }
 
-const ExpandableRow: React.FC<ExpandableRowProps> = ({ appointment, onDelete }) => {
+const ExpandableRow: React.FC<ExpandableRowProps> = ({ appointment, onDelete, onStatusChange }) => {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const token = localStorage.getItem('token');
@@ -92,14 +95,37 @@ const ExpandableRow: React.FC<ExpandableRowProps> = ({ appointment, onDelete }) 
           />
         </TableCell>
         <TableCell>
-          <IconButton
-            aria-label="delete"
-            color="error"
-            onClick={() => onDelete(appointment)}
-            disabled={appointment.status !== 'scheduled'}
-          >
-            <DeleteIcon />
-          </IconButton>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {appointment.status === 'scheduled' && (
+              <>
+                <IconButton
+                  aria-label="complete"
+                  color="success"
+                  onClick={() => onStatusChange(appointment, 'completed')}
+                  title="Complete"
+                >
+                  <CheckCircleIcon />
+                </IconButton>
+                <IconButton
+                  aria-label="cancel"
+                  color="warning"
+                  onClick={() => onStatusChange(appointment, 'cancelled')}
+                  title="Cancel"
+                >
+                  <CancelIcon />
+                </IconButton>
+              </>
+            )}
+            <IconButton
+              aria-label="delete"
+              color="error"
+              onClick={() => onDelete(appointment)}
+              disabled={appointment.status !== 'scheduled'}
+              title="Delete"
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Box>
         </TableCell>
       </TableRow>
       <TableRow>
@@ -341,6 +367,7 @@ const Schedule: React.FC = () => {
                           key={appointment.id}
                           appointment={appointment}
                           onDelete={handleDeleteAppointment}
+                          onStatusChange={handleStatusChange}
                         />
                       ))}
                   </TableBody>
@@ -563,15 +590,11 @@ const Schedule: React.FC = () => {
         open={completionModalOpen}
         title="Complete Appointment"
         message=""
-        onConfirm={() => {
-          setCompletionModalOpen(false);
-          setSelectedAppointment(null);
-          fetchAppointments();
-        }}
         onCancel={() => {
           setCompletionModalOpen(false);
           setSelectedAppointment(null);
         }}
+        customActions={<></>}
       >
         {selectedAppointment && (
           <AppointmentCompletion
