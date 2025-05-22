@@ -68,7 +68,11 @@ export const doctorService = {
       console.log('Photo upload response:', response.data);
 
       // Get the current profile and update it with the new photo URL
-      const currentProfile = await this.getProfile();
+      // Add cache-busting param to force a fresh fetch
+      const currentProfile = await api
+        .get<DoctorProfile>(`/api/doctors/profile?t=${new Date().getTime()}`)
+        .then((res) => res.data);
+
       const updatedProfile = {
         ...currentProfile,
         photoUrl: response.data.photoUrl,

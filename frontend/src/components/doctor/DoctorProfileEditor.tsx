@@ -11,11 +11,13 @@ import {
   Avatar,
   IconButton,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import { useAuth } from '../../contexts/shared/AuthContext';
 import { doctorService } from '../../services/doctor/doctor.service';
 import { DoctorProfile } from '../../types/shared/auth.types';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { API_BASE_URL } from '../../config/api.config';
 
@@ -120,10 +122,17 @@ const DoctorProfileEditor: React.FC<DoctorProfileEditorProps> = ({ readOnly = fa
         }
 
         const updatedProfile = await doctorService.uploadPhoto(file);
-        setProfile(updatedProfile);
+
+        // Add a timestamp to force re-render of the image
+        const profileWithTimestamp: DoctorProfile = {
+          ...updatedProfile,
+          photoUrl: updatedProfile.photoUrl ? `${updatedProfile.photoUrl}?t=${new Date().getTime()}` : undefined,
+        };
+
+        setProfile(profileWithTimestamp);
         updateUser({
           ...user!,
-          doctorProfile: updatedProfile,
+          doctorProfile: profileWithTimestamp,
         });
         setSuccess('Photo updated successfully');
       } catch (err: any) {
@@ -188,7 +197,9 @@ const DoctorProfileEditor: React.FC<DoctorProfileEditorProps> = ({ readOnly = fa
         {profile?.photoUrl ? (
           <Box sx={{ position: 'relative' }}>
             <Avatar
-              src={profile.photoUrl.startsWith('http') ? profile.photoUrl : `${API_BASE_URL}${profile.photoUrl}`}
+              src={`${
+                profile.photoUrl.startsWith('http') ? profile.photoUrl : `${API_BASE_URL}${profile.photoUrl}`
+              }?t=${new Date().getTime()}`}
               alt={profile?.name || ''}
               sx={{
                 width: 100,
@@ -206,6 +217,23 @@ const DoctorProfileEditor: React.FC<DoctorProfileEditorProps> = ({ readOnly = fa
             >
               {profile?.name?.charAt(0).toUpperCase()}
             </Avatar>
+            {!readOnly && (
+              <Tooltip title="Refresh photo">
+                <IconButton
+                  size="small"
+                  sx={{ position: 'absolute', bottom: 0, right: 10, bgcolor: 'white' }}
+                  onClick={() => {
+                    const timestamp = new Date().getTime();
+                    setProfile({
+                      ...profile,
+                      photoUrl: profile.photoUrl ? `${profile.photoUrl.split('?')[0]}?t=${timestamp}` : undefined,
+                    });
+                  }}
+                >
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
         ) : (
           <Avatar
