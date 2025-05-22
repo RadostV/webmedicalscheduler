@@ -89,15 +89,9 @@ export const doctorService = {
   async getDoctorProfile(doctorId: string): Promise<DoctorProfile> {
     try {
       console.log('Fetching doctor profile for ID:', doctorId);
-      const response = await api.get<DoctorProfile[]>('/api/doctors');
-      const doctor = response.data.find((d) => d.id === doctorId);
-
-      if (!doctor) {
-        throw new Error('Doctor not found');
-      }
-
-      console.log('Doctor profile found:', doctor);
-      return doctor;
+      const response = await api.get<DoctorProfile>(`/api/doctors/${doctorId}`);
+      console.log('Doctor profile found:', response.data);
+      return response.data;
     } catch (error) {
       console.error('Error fetching doctor profile:', error);
       if (axios.isAxiosError(error)) {
