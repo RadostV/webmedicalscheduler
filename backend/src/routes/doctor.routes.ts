@@ -1307,6 +1307,73 @@ router.get('/:id', async (req: Request, res: Response): Promise<Response> => {
   }
 });
 
+/**
+ * @swagger
+ * /api/doctors/profile:
+ *   delete:
+ *     summary: Delete doctor profile and all associated appointments
+ *     tags: [Doctors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Doctor profile and appointments deleted successfully
+ *       500:
+ *         description: Failed to delete doctor profile
+ */
+router.delete('/profile', async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const userId = req.user!.id;
+
+    // Get the doctor profile
+    const doctor = await prisma.doctor.findUnique({
+      where: {
+        userId,
+      },
+    });
+
+    if (!doctor) {
+      return res.status(404).json({ error: 'Doctor profile not found' });
+    }
+
+    // Delete in transaction to ensure all related data is removed
+    await prisma.$transaction(async (tx) => {
+      // Delete all appointments for this doctor
+      await tx.appointment.deleteMany({
+        where: {
+          doctorId: userId,
+        },
+      });
+
+      // Delete all availability entries
+      await tx.availability.deleteMany({
+        where: {
+          doctorId: doctor.id,
+        },
+      });
+
+      // Delete doctor profile
+      await tx.doctor.delete({
+        where: {
+          userId,
+        },
+      });
+
+      // Optionally, delete user account if needed
+      // await tx.user.delete({
+      //   where: {
+      //     id: userId,
+      //   },
+      // });
+    });
+
+    return res.json({ message: 'Doctor profile and all associated data deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting doctor profile:', error);
+    return res.status(500).json({ error: 'Failed to delete doctor profile' });
+  }
+});
+
 // Helper function to generate time slots
 function generateTimeSlots(date: Date, startTime: string, endTime: string): string[] {
   const slots: string[] = [];

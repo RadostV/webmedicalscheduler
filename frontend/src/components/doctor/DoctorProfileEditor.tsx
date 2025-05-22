@@ -12,6 +12,11 @@ import {
   IconButton,
   CircularProgress,
   Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from '@mui/material';
 import { useAuth } from '../../contexts/shared/AuthContext';
 import { doctorService } from '../../services/doctor/doctor.service';
@@ -19,6 +24,7 @@ import { DoctorProfile } from '../../types/shared/auth.types';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { API_BASE_URL } from '../../config/api.config';
 
 interface DoctorProfileEditorProps {
@@ -28,13 +34,14 @@ interface DoctorProfileEditorProps {
 
 const DoctorProfileEditor: React.FC<DoctorProfileEditorProps> = ({ readOnly = false, doctorId }) => {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [formData, setFormData] = useState<Partial<DoctorProfile>>({
     specialty: '',
@@ -167,6 +174,20 @@ const DoctorProfileEditor: React.FC<DoctorProfileEditorProps> = ({ readOnly = fa
 
   const handleBack = () => {
     navigate('/patient/search-doctors');
+  };
+
+  const handleDelete = async () => {
+    try {
+      setIsSubmitting(true);
+      await doctorService.deleteProfile();
+      setSuccess('Profile deleted successfully');
+      logout();
+      navigate('/login');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete profile');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -400,13 +421,58 @@ const DoctorProfileEditor: React.FC<DoctorProfileEditorProps> = ({ readOnly = fa
         </Grid>
 
         {!readOnly && (
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={() => {
+                setDeleteDialogOpen(true);
+              }}
+              disabled={isSubmitting}
+            >
+              Delete Profile
+            </Button>
+
             <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </Box>
         )}
       </form>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{'Delete Profile'}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Are you sure you want to delete your profile? This will permanently remove all your data including:
+            <ul>
+              <li>Your doctor profile</li>
+              <li>All your scheduled appointments</li>
+              <li>Your availability settings</li>
+            </ul>
+            This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              handleDelete();
+              setDeleteDialogOpen(false);
+            }}
+            color="error"
+            variant="contained"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

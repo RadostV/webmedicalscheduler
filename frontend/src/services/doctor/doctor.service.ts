@@ -54,6 +54,10 @@ export const doctorService = {
     return response.data;
   },
 
+  async deleteProfile(): Promise<void> {
+    await api.delete('/api/doctors/profile');
+  },
+
   async uploadPhoto(photo: File): Promise<DoctorProfile> {
     const formData = new FormData();
     formData.append('photo', photo);
