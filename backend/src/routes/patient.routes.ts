@@ -7,9 +7,10 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
-// Use the Patient model the same way we use other models
-// const patientModel = prisma.patient;
+// Create a separate router for public routes
+const publicRouter = Router();
 
+// Main router that will use authentication
 const router = Router();
 
 // Apply authentication middleware to all patient routes
@@ -395,7 +396,7 @@ router.post(
  *       500:
  *         description: Failed to retrieve photo
  */
-router.get('/profile/photo/:patientId', async (req: Request, res: Response): Promise<void> => {
+publicRouter.get('/profile/photo/:patientId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { patientId } = req.params;
     const patientIdNumber = parseInt(patientId);
@@ -434,8 +435,14 @@ router.get('/profile/photo/:patientId', async (req: Request, res: Response): Pro
     if (ext === '.gif') contentType = 'image/gif';
     if (ext === '.webp') contentType = 'image/webp';
 
-    // Send the file
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
     res.setHeader('Content-Type', contentType);
+
+    // Send the file
     fs.createReadStream(photoPath).pipe(res);
   } catch (error) {
     console.error('Error retrieving patient photo:', error);
@@ -830,4 +837,5 @@ router.post(
   }
 );
 
-export default router;
+// Export both routers
+export { publicRouter, router as default };

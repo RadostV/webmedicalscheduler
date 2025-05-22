@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import swaggerUi from 'swagger-ui-express';
 import { specs } from './swagger';
 import authRoutes from './routes/auth.routes';
-import patientRoutes from './routes/patient.routes';
+import patientRoutes, { publicRouter as patientPublicRoutes } from './routes/patient.routes';
 import doctorRoutes, { publicRouter as doctorPublicRoutes } from './routes/doctor.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { authMiddleware } from './middleware/auth.middleware';
@@ -35,6 +35,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Routes
 app.use('/api/auth', authRoutes);
+// Mount public patient routes first
+app.use('/api/patients', patientPublicRoutes);
+// Then mount authenticated patient routes
 app.use('/api/patients', authMiddleware, patientRoutes);
 // Mount public doctor routes first
 app.use('/api/doctors', doctorPublicRoutes);
