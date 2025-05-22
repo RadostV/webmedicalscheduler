@@ -30,6 +30,11 @@ class PatientService {
     return response.data;
   }
 
+  async getProfile(): Promise<PatientProfile> {
+    const response = await api.get('/api/patients/profile');
+    return response.data;
+  }
+
   async getPatientProfile(userId: string): Promise<PatientProfile> {
     const response = await api.get(`/api/patients/profile/${userId}`);
     return response.data;

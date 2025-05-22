@@ -58,9 +58,9 @@ const PatientProfileEditor: React.FC<PatientProfileEditorProps> = ({ readOnly = 
         if (readOnly && patientId) {
           // If in read-only mode and patientId provided, fetch that specific patient's profile
           fetchedProfile = await patientService.getPatientProfile(patientId);
-        } else if (!readOnly && !patientId && user?.patientProfile) {
-          // If in edit mode and no patientId, use the logged-in patient's profile from context
-          fetchedProfile = await patientService.getPatientProfile(user.patientProfile.userId);
+        } else if (!readOnly) {
+          // If in edit mode, use the current patient's profile via auth
+          fetchedProfile = await patientService.getProfile();
         } else {
           throw new Error('Invalid component configuration');
         }
@@ -87,7 +87,7 @@ const PatientProfileEditor: React.FC<PatientProfileEditorProps> = ({ readOnly = 
     };
 
     loadProfile();
-  }, [patientId, readOnly, user?.patientProfile]);
+  }, [patientId, readOnly]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

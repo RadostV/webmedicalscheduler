@@ -372,51 +372,74 @@ router.post(
 
 /**
  * @swagger
- * /api/patients/appointments/{id}:
- *   delete:
- *     summary: Cancel an appointment
+ * /api/patients/profile/photo/{patientId}:
+ *   get:
+ *     summary: Get patient's profile photo
  *     tags: [Patients]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: patientId
  *         required: true
  *         schema:
- *           type: integer
- *         description: Appointment ID
+ *           type: string
  *     responses:
- *       204:
- *         description: Appointment cancelled successfully
+ *       200:
+ *         description: Photo retrieved successfully
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
  *       404:
- *         description: Appointment not found
+ *         description: Photo not found
  *       500:
- *         description: Failed to cancel appointment
+ *         description: Failed to retrieve photo
  */
-router.delete('/appointments/:id', async (req: Request, res: Response): Promise<Response> => {
+router.get('/profile/photo/:patientId', async (req: Request, res: Response): Promise<void> => {
   try {
-    const appointmentId = parseInt(req.params.id);
+    const { patientId } = req.params;
+    const patientIdNumber = parseInt(patientId);
 
-    const appointment = await prisma.appointment.findFirst({
-      where: {
-        id: appointmentId,
-        patientId: req.user!.id,
-      },
-    });
-
-    if (!appointment) {
-      return res.status(404).json({ error: 'Appointment not found' });
+    // Validate patientId is a number
+    if (isNaN(patientIdNumber)) {
+      res.status(400).json({ error: 'Invalid patient ID format' });
+      return;
     }
 
-    await prisma.appointment.delete({
+    // Find the patient profile
+    const patientProfile = await prisma.patient.findUnique({
       where: {
-        id: appointmentId,
+        id: patientIdNumber,
       },
     });
 
-    return res.status(204).send();
+    if (!patientProfile || !patientProfile.photo) {
+      res.status(404).json({ error: 'Photo not found' });
+      return;
+    }
+
+    // Get the photo path
+    const photoPath = patientProfile.photo;
+
+    // Check if file exists
+    if (!fs.existsSync(photoPath)) {
+      res.status(404).json({ error: 'Photo file not found' });
+      return;
+    }
+
+    // Determine content type
+    const ext = path.extname(photoPath).toLowerCase();
+    let contentType = 'image/jpeg';
+    if (ext === '.png') contentType = 'image/png';
+    if (ext === '.gif') contentType = 'image/gif';
+    if (ext === '.webp') contentType = 'image/webp';
+
+    // Send the file
+    res.setHeader('Content-Type', contentType);
+    fs.createReadStream(photoPath).pipe(res);
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to cancel appointment' });
+    console.error('Error retrieving patient photo:', error);
+    res.status(500).json({ error: 'Failed to retrieve photo' });
   }
 });
 
@@ -492,6 +515,93 @@ router.get('/profile/:userId', async (req: Request, res: Response): Promise<Resp
       photoUrl: patientProfile.photo ? `/api/patients/profile/photo/${patientProfile.id}` : null,
     };
 
+    return res.json(profile);
+  } catch (error) {
+    console.error('Error fetching patient profile:', error);
+    return res.status(500).json({ error: 'Failed to fetch patient profile' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/patients/profile:
+ *   get:
+ *     summary: Get current patient's profile
+ *     tags: [Patients]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Patient profile data
+ *       404:
+ *         description: Patient profile not found
+ *       500:
+ *         description: Failed to fetch patient profile
+ */
+router.get('/profile', async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    console.log('Fetching profile for patient:', req.user);
+
+    // First find the user
+    const user = await prisma.user.findUnique({
+      where: {
+        id: req.user!.id,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Then find the associated patient profile
+    let patientProfile = await prisma.patient.findUnique({
+      where: {
+        userId: req.user!.id,
+      },
+    });
+
+    // If patient profile doesn't exist, create a default one
+    if (!patientProfile) {
+      console.log('No patient profile found for user', req.user!.id, 'creating default profile');
+
+      try {
+        // Generate a unique default email
+        const defaultEmail = `patient${req.user!.id}@medicalsched.example.com`;
+
+        patientProfile = await prisma.patient.create({
+          data: {
+            userId: req.user!.id,
+            phone: '',
+            email: defaultEmail, // Use unique email
+            address: '',
+          },
+        });
+        console.log('Created default patient profile:', patientProfile);
+      } catch (createError) {
+        console.error('Error creating default patient profile:', createError);
+        return res.status(500).json({ error: 'Failed to create patient profile' });
+      }
+    }
+
+    // Format the response
+    const profile = {
+      id: patientProfile.id.toString(),
+      userId: user.id.toString(),
+      name: user.username,
+      dateOfBirth: patientProfile.dateOfBirth,
+      gender: patientProfile.gender,
+      medicalHistory: patientProfile.medicalHistory,
+      allergies: patientProfile.allergies,
+      medications: patientProfile.medications,
+      bloodType: patientProfile.bloodType,
+      phone: patientProfile.phone,
+      email: patientProfile.email,
+      address: patientProfile.address,
+      emergencyContact: patientProfile.emergencyContact,
+      photoUrl: patientProfile.photo ? `/api/patients/profile/photo/${patientProfile.id}` : null,
+    };
+
+    console.log('Found patient profile:', profile);
     return res.json(profile);
   } catch (error) {
     console.error('Error fetching patient profile:', error);
@@ -719,78 +829,5 @@ router.post(
     }
   }
 );
-
-/**
- * @swagger
- * /api/patients/profile/photo/{patientId}:
- *   get:
- *     summary: Get patient's profile photo
- *     tags: [Patients]
- *     parameters:
- *       - in: path
- *         name: patientId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Photo retrieved successfully
- *         content:
- *           image/*:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: Photo not found
- *       500:
- *         description: Failed to retrieve photo
- */
-router.get('/profile/photo/:patientId', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { patientId } = req.params;
-    const patientIdNumber = parseInt(patientId);
-
-    // Validate patientId is a number
-    if (isNaN(patientIdNumber)) {
-      res.status(400).json({ error: 'Invalid patient ID format' });
-      return;
-    }
-
-    // Find the patient profile
-    const patientProfile = await prisma.patient.findUnique({
-      where: {
-        id: patientIdNumber,
-      },
-    });
-
-    if (!patientProfile || !patientProfile.photo) {
-      res.status(404).json({ error: 'Photo not found' });
-      return;
-    }
-
-    // Get the photo path
-    const photoPath = patientProfile.photo;
-
-    // Check if file exists
-    if (!fs.existsSync(photoPath)) {
-      res.status(404).json({ error: 'Photo file not found' });
-      return;
-    }
-
-    // Determine content type
-    const ext = path.extname(photoPath).toLowerCase();
-    let contentType = 'image/jpeg';
-    if (ext === '.png') contentType = 'image/png';
-    if (ext === '.gif') contentType = 'image/gif';
-    if (ext === '.webp') contentType = 'image/webp';
-
-    // Send the file
-    res.setHeader('Content-Type', contentType);
-    fs.createReadStream(photoPath).pipe(res);
-  } catch (error) {
-    console.error('Error retrieving patient photo:', error);
-    res.status(500).json({ error: 'Failed to retrieve photo' });
-  }
-});
 
 export default router;
