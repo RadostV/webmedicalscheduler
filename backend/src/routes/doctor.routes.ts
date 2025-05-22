@@ -528,7 +528,9 @@ router.get('/slots', async (req: Request, res: Response): Promise<Response> => {
 
     const date = new Date(dateStr);
     // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
-    const dayOfWeek = (date.getDay() + 6) % 7;
+    // JavaScript: Sunday=0, Monday=1, ..., Saturday=6
+    // Our system: Monday=0, Tuesday=1, ..., Sunday=6
+    const dayOfWeek = date.getDay() === 0 ? 6 : date.getDay() - 1;
 
     const doctorProfile = await prisma.doctor.findUnique({
       where: {
@@ -617,20 +619,11 @@ router.get('/:id/slots', async (req: Request, res: Response): Promise<Response> 
 
     const date = new Date(dateStr);
     // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
-    const dayOfWeek = (date.getDay() + 6) % 7;
+    // JavaScript: Sunday=0, Monday=1, ..., Saturday=6
+    // Our system: Monday=0, Tuesday=1, ..., Sunday=6
+    const dayOfWeek = date.getDay() === 0 ? 6 : date.getDay() - 1;
 
-    const doctorProfile = await prisma.doctor.findFirst({
-      where: {
-        userId: parseInt(req.params.id),
-      },
-      include: {
-        availability: {
-          where: {
-            dayOfWeek,
-          },
-        },
-      },
-    });
+    const doctorProfile = await findDoctorByEitherIdType(req.params.id, dayOfWeek);
 
     if (!doctorProfile || !doctorProfile.availability.length) {
       return res.status(404).json({ error: 'No availability found for this day' });
@@ -1332,6 +1325,41 @@ function generateTimeSlots(date: Date, startTime: string, endTime: string): stri
   }
 
   return slots;
+}
+
+// Helper function to find doctor by either doctorId or userId
+async function findDoctorByEitherIdType(id: string, dayOfWeek: number) {
+  // First try to find by doctor.id (profile ID)
+  let doctor = await prisma.doctor.findFirst({
+    where: {
+      id: parseInt(id),
+    },
+    include: {
+      availability: {
+        where: {
+          dayOfWeek,
+        },
+      },
+    },
+  });
+
+  // If not found, try by user.id (userId)
+  if (!doctor) {
+    doctor = await prisma.doctor.findFirst({
+      where: {
+        userId: parseInt(id),
+      },
+      include: {
+        availability: {
+          where: {
+            dayOfWeek,
+          },
+        },
+      },
+    });
+  }
+
+  return doctor;
 }
 
 // Export both routers

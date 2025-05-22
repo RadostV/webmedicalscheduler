@@ -269,7 +269,7 @@ router.post(
       }
 
       // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
-      const dayOfWeek = (appointmentDate.getDay() + 6) % 7;
+      const dayOfWeek = appointmentDate.getDay() === 0 ? 6 : appointmentDate.getDay() - 1;
       const timeString = appointmentDate.toTimeString().slice(0, 5); // HH:mm format
 
       console.log('Checking availability for:', {
@@ -901,6 +901,53 @@ router.get('/doctors', async (_req: Request, res: Response): Promise<Response> =
   }
 });
 
+// Helper function to find doctor by either doctorId or userId
+async function findDoctorByEitherIdType(id: string, dayOfWeek: number) {
+  // First try to find by doctor.id (profile ID)
+  let doctor = await prisma.doctor.findFirst({
+    where: {
+      id: parseInt(id),
+    },
+    include: {
+      availability: {
+        where: {
+          dayOfWeek,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
+
+  // If not found, try by user.id (userId)
+  if (!doctor) {
+    doctor = await prisma.doctor.findFirst({
+      where: {
+        userId: parseInt(id),
+      },
+      include: {
+        availability: {
+          where: {
+            dayOfWeek,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+  }
+
+  return doctor;
+}
+
 /**
  * @swagger
  * /api/patients/doctors/{doctorId}/slots:
@@ -938,26 +985,39 @@ router.get('/doctors/:doctorId/slots', async (req: Request, res: Response): Prom
     const { doctorId } = req.params;
     const dateStr = req.query.date as string;
 
+    console.log('GET /doctors/:doctorId/slots called with:', {
+      doctorId,
+      dateStr,
+      isNumber: !isNaN(parseInt(doctorId)),
+    });
+
     if (!dateStr) {
+      console.log('Missing date parameter');
       return res.status(400).json({ error: 'Date parameter is required' });
     }
 
     const date = new Date(dateStr);
     // Convert JavaScript's Sunday-based day (0-6) to Monday-based day (0-6)
-    const dayOfWeek = (date.getDay() + 6) % 7;
+    // JavaScript: Sunday=0, Monday=1, ..., Saturday=6
+    // Our system: Monday=0, Tuesday=1, ..., Sunday=6
+    const dayOfWeek = date.getDay() === 0 ? 6 : date.getDay() - 1;
 
-    // Find the doctor profile
-    const doctorProfile = await prisma.doctor.findFirst({
-      where: {
-        id: parseInt(doctorId),
-      },
-      include: {
-        availability: {
-          where: {
-            dayOfWeek,
-          },
-        },
-      },
+    console.log('Date converted to:', {
+      date: date.toString(),
+      javascriptDayOfWeek: date.getDay(),
+      convertedDayOfWeek: dayOfWeek,
+    });
+
+    // Find doctor by either ID type
+    const doctorProfile = await findDoctorByEitherIdType(doctorId, dayOfWeek);
+
+    console.log('Doctor profile query result:', {
+      doctorId,
+      found: !!doctorProfile,
+      doctorProfileId: doctorProfile?.id,
+      userId: doctorProfile?.userId,
+      name: doctorProfile?.user?.username,
+      availabilityCount: doctorProfile?.availability?.length || 0,
     });
 
     if (!doctorProfile || !doctorProfile.availability.length) {
@@ -965,6 +1025,11 @@ router.get('/doctors/:doctorId/slots', async (req: Request, res: Response): Prom
     }
 
     const availability = doctorProfile.availability[0];
+    console.log('Found availability:', {
+      startTime: availability.startTime,
+      endTime: availability.endTime,
+      dayOfWeek: availability.dayOfWeek,
+    });
 
     // Generate time slots
     const slots = generateTimeSlots(date, availability.startTime, availability.endTime);
@@ -982,6 +1047,12 @@ router.get('/doctors/:doctorId/slots', async (req: Request, res: Response): Prom
 
     const bookedTimes = new Set(bookedAppointments.map((apt) => apt.dateTime.toTimeString().slice(0, 5)));
     const availableSlots = slots.filter((slot) => !bookedTimes.has(slot));
+
+    console.log('Slots results:', {
+      totalGeneratedSlots: slots.length,
+      bookedSlots: bookedTimes.size,
+      availableSlots: availableSlots.length,
+    });
 
     return res.json(availableSlots);
   } catch (error) {
@@ -1066,28 +1137,61 @@ router.get('/doctors/:doctorId', async (req: Request, res: Response): Promise<Re
       return res.status(404).json({ error: 'Doctor not found' });
     }
 
-    console.log(`Found doctor: ${doctor.user.username} (ID: ${doctor.id})`);
+    console.log(`Doctor found: ${doctor.user.username}`);
 
     // Format the response
-    const formattedDoctor = {
+    const profile = {
       id: doctor.id.toString(),
-      userId: doctor.user.id.toString(),
+      userId: doctor.userId.toString(),
       name: doctor.user.username,
       specialty: doctor.specialty || '',
       education: doctor.education || '',
       qualification: doctor.qualification || '',
-      description: doctor.description || '',
-      phone: doctor.phone || '',
-      email: doctor.email || '',
-      location: doctor.location || '',
-      languages: doctor.languages || '',
       photoUrl: doctor.photo ? `/api/doctors/profile/photo/${doctor.id}` : null,
     };
 
-    return res.json(formattedDoctor);
+    return res.json(profile);
   } catch (error) {
     console.error('Error fetching doctor profile:', error);
     return res.status(500).json({ error: 'Failed to fetch doctor profile' });
+  }
+});
+
+/**
+ * DEBUG: Get all doctors with their IDs and availability
+ */
+router.get('/doctors/debug', async (_req: Request, res: Response): Promise<Response> => {
+  try {
+    // Get all doctors with their user info and availability
+    const doctors = await prisma.doctor.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        availability: true,
+      },
+    });
+
+    // Format the response to clearly show IDs and relationships
+    const formattedDoctors = doctors.map((doctor) => ({
+      doctorId: doctor.id,
+      userId: doctor.userId,
+      name: doctor.user.username,
+      availability: doctor.availability.map((a) => ({
+        id: a.id,
+        dayOfWeek: a.dayOfWeek,
+        startTime: a.startTime,
+        endTime: a.endTime,
+      })),
+    }));
+
+    return res.json(formattedDoctors);
+  } catch (error) {
+    console.error('Error fetching doctor debug info:', error);
+    return res.status(500).json({ error: 'Failed to fetch doctor debug info' });
   }
 });
 
